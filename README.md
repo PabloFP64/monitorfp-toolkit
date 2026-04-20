@@ -93,11 +93,6 @@ Desde otro equipo de la LAN:
 http://<IP_DEL_PC_UNITY>:8080
 ```
 
-Ejemplo:
-
-```text
-http://192.168.1.55:8080
-```
 
 ## 4) Qué muestra el dashboard web
 
