@@ -1,3 +1,5 @@
+using System;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
@@ -27,7 +29,7 @@ public static class MonitorFPTopDownCameraTools
         cameraGO.transform.position = targetPosition + Vector3.up * DefaultHeight;
         cameraGO.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
 
-        MjpegTelemetryServer server = FindServerInScene();
+        Component server = FindServerInScene();
         if (server != null)
         {
             Undo.RecordObject(server, "Assign map capture camera");
@@ -72,10 +74,56 @@ public static class MonitorFPTopDownCameraTools
         }
     }
 
-    private static MjpegTelemetryServer FindServerInScene()
+    private static Component FindServerInScene()
     {
-        MjpegTelemetryServer[] servers = Object.FindObjectsByType<MjpegTelemetryServer>(FindObjectsSortMode.None);
-        return servers != null && servers.Length > 0 ? servers[0] : null;
+        Type serverType = FindTypeByName("MjpegTelemetryServer");
+        if (serverType == null || !typeof(Component).IsAssignableFrom(serverType))
+        {
+            return null;
+        }
+
+        UnityEngine.Object[] servers = UnityEngine.Object.FindObjectsByType(serverType, FindObjectsSortMode.None);
+        return servers != null && servers.Length > 0 ? servers[0] as Component : null;
+    }
+
+    private static Type FindTypeByName(string typeName)
+    {
+        Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+        for (int i = 0; i < assemblies.Length; i++)
+        {
+            Assembly assembly = assemblies[i];
+            Type exactType = assembly.GetType(typeName, false);
+            if (exactType != null)
+            {
+                return exactType;
+            }
+
+            Type[] types;
+            try
+            {
+                types = assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                types = ex.Types;
+            }
+
+            if (types == null)
+            {
+                continue;
+            }
+
+            for (int j = 0; j < types.Length; j++)
+            {
+                Type t = types[j];
+                if (t != null && t.Name == typeName)
+                {
+                    return t;
+                }
+            }
+        }
+
+        return null;
     }
 
     private static Transform FindBestPlayerReference()
