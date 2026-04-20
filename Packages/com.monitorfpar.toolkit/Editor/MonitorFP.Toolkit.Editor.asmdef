@@ -1,0 +1,17 @@
+{
+  "name": "MonitorFP.AR.Toolkit.Editor",
+  "rootNamespace": "MonitorFP.AR.Toolkit.Editor",
+  "references": [
+    "MonitorFP.AR.Toolkit.Runtime"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

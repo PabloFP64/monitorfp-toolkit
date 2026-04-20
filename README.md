@@ -10,14 +10,22 @@ Con este toolkit puedes exponer por HTTP:
 - dashboard web listo para usar
 
 ### AR:
+- video en vivo (MJPEG)
+- telemetria de posicion/rotacion (XYZ)
+- estadisticas de sesion y recorrido
+- dashboard web basico
 
 
 ## 1) Requisitos
 
 - Unity 6 (probado en 6000.3.x)
-- Paquete `com.unity.xr.interaction.toolkit` instalado
 - Una escena con camara del usuario (`Main Camera` o camara equivalente)
 - Red local abierta si quieres verlo desde otro dispositivo
+
+Notas:
+
+- VR package: requiere `com.unity.xr.interaction.toolkit`
+- AR package: no lo requiere para telemetria/stream base
 
 ## 2) Instalacion (elige una opcion)
 
