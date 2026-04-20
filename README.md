@@ -23,7 +23,7 @@ Instalarlo desde Git en Package Manager:
 
 1. Unity -> Window -> Package Manager
 2. `+` -> Add package from git URL
-3. URL
+3. URL: https://github.com/PabloFP64/monitorfp-toolkit.git?path=/Packages/com.monitorfp.toolkit
 
 ## 3) Setup minimo en escena
 
