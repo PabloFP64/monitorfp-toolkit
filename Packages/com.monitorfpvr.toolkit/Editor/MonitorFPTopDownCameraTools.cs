@@ -5,11 +5,12 @@ using UnityEngine;
 
 public static class MonitorFPTopDownCameraTools
 {
-    private const string MenuPath = "MonitorFP/Crear Camara Top Down para Mapa";
+    private const string MenuPathTopDown = "MonitorFP/VR/Crear Camara Top Down para Mapa";
+    private const string MenuPathSetup = "MonitorFP/VR/Crear Setup Minimo en Escena";
     private const float DefaultHeight = 8f;
     private const float DefaultOrthoSize = 6f;
 
-    [MenuItem(MenuPath)]
+    [MenuItem(MenuPathTopDown)]
     public static void CreateTopDownMapCamera()
     {
         Transform target = FindBestPlayerReference();
@@ -72,6 +73,77 @@ public static class MonitorFPTopDownCameraTools
         {
             Debug.LogWarning("[MONITOR] Camara top-down creada, pero no se encontro MjpegTelemetryServer en la escena para asignarla automaticamente.");
         }
+    }
+
+    [MenuItem(MenuPathSetup)]
+    public static void CreateMinimalSceneSetup()
+    {
+        Component server = EnsureRuntimeComponentOnNamedObject("MonitorServer", "MjpegTelemetryServer");
+        EnsureRuntimeComponentOnNamedObject("SessionRecorder", "SessionRecorder");
+        EnsureRuntimeComponentOnNamedObject("UserTracker", "UserTracker");
+
+        GameObject sessionRecorderGO = GameObject.Find("SessionRecorder");
+        if (sessionRecorderGO != null)
+        {
+            Undo.RecordObject(sessionRecorderGO, "Ensure SessionRecorder is active");
+            sessionRecorderGO.SetActive(true);
+            EditorUtility.SetDirty(sessionRecorderGO);
+        }
+
+        if (server != null)
+        {
+            Camera source = Camera.main;
+            if (source == null)
+            {
+                source = UnityEngine.Object.FindFirstObjectByType<Camera>(FindObjectsInactive.Exclude);
+            }
+
+            if (source != null)
+            {
+                Undo.RecordObject(server, "Assign source camera");
+                SerializedObject so = new SerializedObject(server);
+                SerializedProperty sourceCameraProp = so.FindProperty("sourceCamera");
+                if (sourceCameraProp != null)
+                {
+                    sourceCameraProp.objectReferenceValue = source;
+                    so.ApplyModifiedProperties();
+                    EditorUtility.SetDirty(server);
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[MONITOR] Setup minimo creado, pero no se encontro ninguna Camera para asignar en Source Camera.");
+            }
+        }
+
+        Debug.Log("[MONITOR] Setup minimo creado: MonitorServer + SessionRecorder + UserTracker.");
+    }
+
+    private static Component EnsureRuntimeComponentOnNamedObject(string gameObjectName, string componentTypeName)
+    {
+        Type runtimeType = FindTypeByName(componentTypeName);
+        if (runtimeType == null || !typeof(Component).IsAssignableFrom(runtimeType))
+        {
+            Debug.LogError($"[MONITOR] No se encontro el tipo runtime '{componentTypeName}'.");
+            return null;
+        }
+
+        GameObject go = GameObject.Find(gameObjectName);
+        if (go == null)
+        {
+            go = new GameObject(gameObjectName);
+            Undo.RegisterCreatedObjectUndo(go, $"Create {gameObjectName}");
+        }
+
+        Component existing = go.GetComponent(runtimeType);
+        if (existing != null)
+        {
+            return existing;
+        }
+
+        Component created = Undo.AddComponent(go, runtimeType);
+        EditorUtility.SetDirty(go);
+        return created;
     }
 
     private static Component FindServerInScene()

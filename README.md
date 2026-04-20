@@ -52,7 +52,7 @@ Si ves dashboard y video, ya funciona.
 
 Usa el menu de Unity:
 
-`MonitorFP > Crear Camara Top Down para Mapa`
+`MonitorFP > VR > Crear Camara Top Down para Mapa`
 
 Esto crea una camara ortográfica cenital y:
 
@@ -60,6 +60,18 @@ Esto crea una camara ortográfica cenital y:
 - activa `Auto Generate Map From Camera`
 - ajusta `mapWorldMinXZ` / `mapWorldMaxXZ`
 - deja la camara en `Target Display 2` para no pisar la principal
+
+Setup automatico de escena (VR):
+
+`MonitorFP > VR > Crear Setup Minimo en Escena`
+
+Este comando crea automaticamente:
+
+- `MonitorServer` con `MjpegTelemetryServer`
+- `SessionRecorder` con `SessionRecorder`
+- `UserTracker` con `UserTracker`
+- asigna `Source Camera` en `MjpegTelemetryServer` cuando encuentra una camara
+- deja `SessionRecorder` activo en escena
 
 ### Opcion manual
 
