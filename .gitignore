@@ -1,0 +1,13 @@
+# Unity cache and build folders
+Library/
+Temp/
+Obj/
+Logs/
+UserSettings/
+Build/
+Builds/
+DerivedDataCache/
+
+# OS files
+.DS_Store
+Thumbs.db

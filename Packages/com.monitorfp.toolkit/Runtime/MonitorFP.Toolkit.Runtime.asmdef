@@ -1,0 +1,16 @@
+{
+  "name": "MonitorFP.Toolkit.Runtime",
+  "rootNamespace": "MonitorFP.Toolkit",
+  "references": [
+    "Unity.XR.Interaction.Toolkit"
+  ],
+  "autoReferenced": true,
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
