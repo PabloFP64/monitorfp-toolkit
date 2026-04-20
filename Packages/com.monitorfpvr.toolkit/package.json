@@ -1,7 +1,7 @@
 {
-  "name": "com.monitorfp.toolkit",
+  "name": "com.monitorfpvr.toolkit",
   "version": "0.1.0",
-  "displayName": "MonitorFP Toolkit",
+  "displayName": "MonitorFP VR Toolkit",
   "description": "Telemetry, session recording, top-down map capture and web viewer helpers for Unity.",
   "unity": "6000.3",
   "author": {

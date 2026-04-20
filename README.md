@@ -1,14 +1,16 @@
 # MonitorFP Toolkit - Guia de Uso
 
-Guia practica para montar monitorizacion en tiempo real en Unity sin Unity Render Streaming.
-
 Con este toolkit puedes exponer por HTTP:
 
+### VR:
 - video en vivo (MJPEG)
 - telemetria de posicion/rotacion
 - estadisticas y eventos de sesion
 - mapa 2D de recorrido (planta XZ)
 - dashboard web listo para usar
+
+### AR:
+
 
 ## 1) Requisitos
 
@@ -19,11 +21,14 @@ Con este toolkit puedes exponer por HTTP:
 
 ## 2) Instalacion (elige una opcion)
 
-Instalarlo desde Git en Package Manager:
+Instalacion desde Git en Package Manager:
 
 1. Unity -> Window -> Package Manager
 2. `+` -> Add package from git URL
-3. URL: https://github.com/PabloFP64/monitorfp-toolkit.git?path=/Packages/com.monitorfp.toolkit
+3. Elige segun tu proyecto:
+
+- VR package : `https://github.com/PabloFP64/monitorfp-toolkit.git?path=/Packages/com.monitorfpvr.toolkit`
+- AR package : `https://github.com/PabloFP64/monitorfp-toolkit.git?path=/Packages/com.monitorfpar.toolkit`
 
 ## 3) Setup minimo en escena
 
