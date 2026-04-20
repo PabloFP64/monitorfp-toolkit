@@ -1,204 +1,165 @@
-# MonitorFP Toolkit Viewer (sin Unity Render Streaming)
+# MonitorFP Toolkit - Guia de Uso
 
-Guía completa para configurar y usar el sistema de monitorización en tiempo real desde Unity hacia web y app de escritorio.
+Guia practica para montar monitorizacion en tiempo real en Unity sin Unity Render Streaming.
 
-## Qué hace este sistema
+Con este toolkit puedes exponer por HTTP:
 
-El componente `MjpegTelemetryServer` embebido en Unity publica:
+- video en vivo (MJPEG)
+- telemetria de posicion/rotacion
+- estadisticas y eventos de sesion
+- mapa 2D de recorrido (planta XZ)
+- dashboard web listo para usar
 
-- Vídeo en vivo del usuario (MJPEG)
-- Telemetría de posición/rotación
-- Estadísticas de sesión
-- Métricas de rendimiento del servidor
-- Dashboard web con gráfica 3D y mapa 2D de recorrido en planta
+## 1) Requisitos
 
-No depende de Unity Render Streaming.
+- Unity 6 (probado en 6000.3.x)
+- Paquete `com.unity.xr.interaction.toolkit` instalado
+- Una escena con camara del usuario (`Main Camera` o camara equivalente)
+- Red local abierta si quieres verlo desde otro dispositivo
 
-## 1) Configuración en Unity
+## 2) Instalacion (elige una opcion)
 
-1. En tu escena, identifica la cámara del usuario (HMD/cámara principal).
-2. Crea tres GameObjects vacíos:
+Instalarlo desde Git en Package Manager:
+
+1. Unity -> Window -> Package Manager
+2. `+` -> Add package from git URL
+3. URL
+
+## 3) Setup minimo en escena
+
+1. Crea tres GameObjects vacios:
    - `MonitorServer` con `MjpegTelemetryServer`
    - `SessionRecorder` con `SessionRecorder`
    - `UserTracker` con `UserTracker`
-3. En `MjpegTelemetryServer`, asigna `Source Camera`.
-4. Añade `UserTracker` en escena para actualizar snapshots.
-5. Para configurar el mapa sin hacerlo a mano, usa el menú de Unity `MonitorFP > Crear Camara Top Down para Mapa`.
-6. La cámara top-down creada se deja en `Target Display 2` para no pisar la cámara principal.
-
-### Parámetros principales (MjpegTelemetryServer)
-
-- `Port`: puerto HTTP (por defecto `8080`)
-- `Frame Width` / `Frame Height`: resolución del stream
-- `FPS`: frames capturados por segundo
-- `JPG Quality`: calidad JPEG (1-100)
-
-### Parámetros de mapa 2D (nuevo)
-
-Sección `Mapa 2D (planta XZ)`:
-
-- `Map Texture`: imagen del plano/mapa que se mostrará en la web
-- `Map World Min XZ`: esquina mínima del mundo en Unity (X,Z)
-- `Map World Max XZ`: esquina máxima del mundo en Unity (X,Z)
-- `Map Flip X`: invierte horizontalmente el mapeo
-- `Map Flip Y`: invierte verticalmente el mapeo
-- `Map Rotation Degrees`: rota el mapa y la trayectoria en la web en pasos de 90 grados (`0`, `90`, `180`, `270`)
-
-Sección `Mapa dinámico (opcional)`:
-
-- `Map Capture Camera`: cámara cenital para generar mapa automáticamente
-- `Auto Generate Map From Camera`: si está activo, genera mapa desde `Map Capture Camera` cuando no hay mapa usable
-- `Auto Generate Grid If No Map`: si está activo, usa una rejilla procedural como fallback
-- `Generated Map Width` / `Generated Map Height`: resolución del mapa generado
-
-Notas:
-
-- Prioridad de carga del mapa: `Map Texture` -> `Map Capture Camera` -> rejilla procedural.
-- Si cambias `Map Texture` o parámetros de generación, reinicia Play para regenerar el mapa en memoria.
-- Si Unity no puede codificar la textura, activa `Read/Write` o usa `Map Capture Camera`.
-
-## 2) Endpoints HTTP disponibles
-
-Servidor escuchando en `0.0.0.0:<port>`:
-
-- `/` dashboard web completo
-- `/frame.jpg` frame JPEG actual
-- `/stream.mjpg` stream MJPEG continuo
-- `/state.json` posición/rotación actual
-- `/stats.json` estadísticas e historial de sesión
-- `/metrics.json` métricas de rendimiento
-- `/map-config.json` configuración del mapa 2D para la web
-- `/map.png` imagen del mapa en PNG
-
-### Diagnóstico de mapa (`/map-config.json`)
-
-Campos útiles para debug:
-
-- `hasMap`: indica si el servidor tiene un mapa listo para servir
-- `hasAssignedMapTexture`: indica si hay `Map Texture` asignada en el Inspector
-- `mapSource`: origen actual del mapa (`texture`, `camera`, `grid`, `none`)
-- `mapMessage`: mensaje descriptivo del último intento de carga/generación
-
-## 3) Uso por web (recomendado)
-
-En el mismo equipo de Unity:
+2. En `MjpegTelemetryServer`, asigna `Source Camera`.
+3. Deja `SessionRecorder` activo en escena.
+4. Ejecuta Play y abre:
 
 ```text
 http://localhost:8080
 ```
 
-Desde otro equipo de la LAN:
+Si ves dashboard y video, ya funciona.
 
-```text
-http://<IP_DEL_PC_UNITY>:8080
-```
+## 4) Configurar mapa 2D rapido
 
+### Opcion automatica (recomendada)
 
-## 4) Qué muestra el dashboard web
+Usa el menu de Unity:
 
-1. Vista en vivo (frame de cámara)
-2. Estadísticas de sesión:
-   - duración
-   - distancia recorrida
-   - velocidad actual
-   - velocidad media
-3. Trayectoria 3D (Plotly) en ejes Unity XYZ
-   - `Y` se muestra como altura
-4. Mapa 2D de recorrido (planta XZ)
-   - trayectoria superpuesta al plano
-   - punto rojo en la última posición
-5. Eventos de sesión (últimos eventos)
-   - ahora pueden mostrar el nombre del objeto interactuado en el campo `[obj: ...]`
-6. Rendimiento:
-   - FPS servidor
-   - latencia media de captura (ms)
-   - frames capturados
-   - uptime
+`MonitorFP > Crear Camara Top Down para Mapa`
 
-## 5) Calibración del mapa 2D (importante)
+Esto crea una camara ortográfica cenital y:
 
-El mapa 2D usa coordenadas de Unity `XZ` y las normaliza entre `Map World Min XZ` y `Map World Max XZ`.
+- la asigna a `mapCaptureCamera`
+- activa `Auto Generate Map From Camera`
+- ajusta `mapWorldMinXZ` / `mapWorldMaxXZ`
+- deja la camara en `Target Display 2` para no pisar la principal
 
-Proceso recomendado:
+### Opcion manual
 
-1. Mide o estima los límites reales del área caminable en Unity (X y Z).
-2. Pon esos valores en `Min XZ` y `Max XZ`.
-3. Prueba moviéndote a esquinas conocidas y verifica si coinciden en el mapa.
-4. Si sale espejado, activa `Map Flip X` y/o `Map Flip Y`.
+En `MjpegTelemetryServer`:
 
-## 6) Registro de eventos personalizados
+- `Map Texture` (si tienes plano prehecho)
+- `Map World Min XZ` / `Map World Max XZ`
+- `Map Flip X` / `Map Flip Y` si sale espejado
+- `Map Rotation Degrees` para orientar el mapa (`0`, `90`, `180`, `270`)
 
-Para añadir eventos desde tus scripts:
+Prioridad de origen del mapa:
+
+`Map Texture` -> `Map Capture Camera` -> rejilla procedural
+
+## 5) Parametros importantes
+
+### Captura / stream
+
+- `Port`: puerto HTTP (`8080` por defecto)
+- `Frame Width` / `Frame Height`: resolucion
+- `FPS`: frames por segundo
+- `JPG Quality`: calidad JPEG (1-100)
+
+### Mapa
+
+- `Map Rotation Degrees`: rota fondo + trayectoria en pasos de 90
+- `Generated Map Width` / `Generated Map Height`: resolucion del mapa generado
+
+## 6) Eventos de sesion
+
+`SessionRecorder` registra:
+
+- inicio de sesion
+- historial de posicion
+- eventos personalizados via `RecordEvent(...)`
+- eventos XR de interaccion (select enter/exit)
+
+En la web, los eventos pueden incluir nombre de objeto en formato `[obj: Nombre]`.
+
+Si quieres hover XR tambien:
+
+- activa `logXRHoverEvents` en `SessionRecorder`
+
+Ejemplo de evento personalizado:
 
 ```csharp
-using UnityEngine;
-
-public class MyInteractionScript : MonoBehaviour
+SessionRecorder recorder = SessionRecorder.GetInstance();
+if (recorder != null)
 {
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            SessionRecorder recorder = SessionRecorder.GetInstance();
-            if (recorder != null)
-            {
-                recorder.RecordEvent("interaction", "Usuario pulsó E");
-            }
-        }
-    }
+    recorder.RecordEvent("interaction", "Usuario pulso E", "PanelBotonAzul");
 }
 ```
 
-Tipos sugeridos:
+## 7) Endpoints HTTP
 
-- `interaction`
-- `movement_start`
-- `movement_stop`
-- `gaze_target`
-- `marker`
+- `/` dashboard web
+- `/frame.jpg` ultimo frame
+- `/stream.mjpg` stream MJPEG
+- `/state.json` snapshot actual
+- `/stats.json` estadisticas + historial
+- `/metrics.json` metricas de rendimiento
+- `/map-config.json` configuracion y diagnostico de mapa
+- `/map.png` imagen del mapa
 
-## 7) Visualización por app de escritorio (opcional)
+Campos utiles en `/map-config.json`:
 
-Ejecutable publicado:
+- `hasMap`
+- `hasAssignedMapTexture`
+- `mapSource` (`texture`, `camera`, `grid`, `none`)
+- `mapMessage`
 
-`ViewerApp/MonitorFPViewer/bin/Release/net8.0-windows/win-x64/publish/MonitorFPViewer.exe`
+## 8) Uso en red
 
-Uso:
+- En el mismo PC: `http://localhost:8080`
+- En LAN: `http://<IP_PC_UNITY>:8080`
+- Abre firewall para el puerto configurado
 
-1. Introduce host/IP del equipo Unity
-2. Puerto (por defecto `8080`)
-3. Conectar
 
-## 8) Recompilar ViewerApp
 
-Desde `ViewerApp/MonitorFPViewer`:
+## 9) Checklist de validacion rapida
 
-```powershell
-dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
-```
+1. `http://localhost:8080` abre
+2. `/frame.jpg` devuelve imagen
+3. `/state.json` cambia al moverte
+4. `/stats.json` crece en `positionHistory`
+5. `/map-config.json` muestra `hasMap=true` o fallback `grid`
 
-## 9) Red y acceso remoto
+## 10) Troubleshooting
 
-- En LAN, abre firewall para el puerto configurado.
-- Fuera de la LAN, necesitas VPN/túnel/port forwarding.
-
-## 10) Solución rápida de problemas
-
-- La web abre pero no actualiza:
-  - revisar URL, firewall y puerto
+- Web abre pero no actualiza:
+  - revisar puerto, firewall y URL
 - `latencia` o `frames` en `-`:
-  - confirmar que `SessionRecorder` está en escena
-- Eventos de sesión sin nombre de objeto:
-   - confirmar que `SessionRecorder` está activo y que la escena contiene interactables XR con `selectEntered`/`hoverEntered`
-- Posición/rotación no cambia en `/state.json`:
-   - confirmar que `UserTracker` está activo y colgado de la cámara del usuario
+  - verificar que `SessionRecorder` existe en escena
+- No cambia `/state.json`:
+  - verificar `UserTracker` activo y camara correcta
 - Mapa no aparece:
-   - revisar `http://localhost:8080/map-config.json`
-   - comprobar `mapSource` y `mapMessage`
-   - si `mapSource=grid`, el mapa real no se pudo cargar; revisar `Map Texture`/`Read-Write` o configurar `Map Capture Camera`
-   - reiniciar Play tras cambios de mapa
-- Recorrido desalineado en mapa:
-  - recalibrar `Min XZ` / `Max XZ`
-  - probar `Flip X` / `Flip Y`
-   - probar `Map Rotation Degrees` si la orientación no coincide con la esperada
+  - revisar `/map-config.json` (`mapSource`, `mapMessage`)
+  - si `mapSource=grid`, revisar `Map Texture` o `Map Capture Camera`
+  - reiniciar Play tras cambios de mapa
+- Recorrido desalineado:
+  - recalibrar `Map World Min XZ` / `Map World Max XZ`
+  - ajustar `Map Flip X` / `Map Flip Y`
+  - ajustar `Map Rotation Degrees`
+- Eventos sin nombre de objeto:
+  - verificar interactables XR en escena
+  - confirmar `SessionRecorder` activo
+
 
