@@ -1,7 +1,5 @@
 using UnityEngine;
-#if MONITORFP_INPUT_SYSTEM
-using UnityEngine.InputSystem;
-#endif
+using System;
 
 public class ARInteractionEventTracker : MonoBehaviour
 {
@@ -13,6 +11,7 @@ public class ARInteractionEventTracker : MonoBehaviour
 
     private Camera targetCamera;
     private GameObject hoveredObject;
+    private bool inputBackendWarningLogged;
 
     private void Start()
     {
@@ -53,72 +52,75 @@ public class ARInteractionEventTracker : MonoBehaviour
     private bool TryGetPointerPosition(out Vector2 pointerPosition)
     {
         pointerPosition = Vector2.zero;
-
-#if MONITORFP_INPUT_SYSTEM
-        if (enableTouch && Touchscreen.current != null)
+        try
         {
-            pointerPosition = Touchscreen.current.primaryTouch.position.ReadValue();
-            return true;
-        }
+            if (enableTouch && Input.touchCount > 0)
+            {
+                pointerPosition = Input.GetTouch(0).position;
+                return true;
+            }
 
-        if (enableMouseInEditor && Mouse.current != null)
+            if (enableMouseInEditor)
+            {
+                pointerPosition = Input.mousePosition;
+                return true;
+            }
+
+            return false;
+        }
+        catch (InvalidOperationException)
         {
-            pointerPosition = Mouse.current.position.ReadValue();
-            return true;
+            LogInputBackendWarningOnce();
+            return false;
         }
-#elif ENABLE_LEGACY_INPUT_MANAGER
-
-        if (enableTouch && Input.touchCount > 0)
-        {
-            pointerPosition = Input.GetTouch(0).position;
-            return true;
-        }
-
-        if (enableMouseInEditor)
-        {
-            pointerPosition = Input.mousePosition;
-            return true;
-        }
-#endif
-
-        return false;
     }
 
     private bool IsPointerPressedThisFrame()
     {
-#if MONITORFP_INPUT_SYSTEM
-        bool touchPressed = enableTouch && Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame;
-        bool mousePressed = enableMouseInEditor && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
-        return touchPressed || mousePressed;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-        if (enableTouch && Input.touchCount > 0)
+        try
         {
-            return Input.GetTouch(0).phase == TouchPhase.Began;
-        }
+            if (enableTouch && Input.touchCount > 0)
+            {
+                return Input.GetTouch(0).phase == TouchPhase.Began;
+            }
 
-        return enableMouseInEditor && Input.GetMouseButtonDown(0);
-#else
-        return false;
-#endif
+            return enableMouseInEditor && Input.GetMouseButtonDown(0);
+        }
+        catch (InvalidOperationException)
+        {
+            LogInputBackendWarningOnce();
+            return false;
+        }
     }
 
     private bool IsPointerReleasedThisFrame()
     {
-#if MONITORFP_INPUT_SYSTEM
-        bool touchReleased = enableTouch && Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasReleasedThisFrame;
-        bool mouseReleased = enableMouseInEditor && Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame;
-        return touchReleased || mouseReleased;
-#elif ENABLE_LEGACY_INPUT_MANAGER
-        if (enableTouch && Input.touchCount > 0)
+        try
         {
-            TouchPhase phase = Input.GetTouch(0).phase;
-            return phase == TouchPhase.Ended || phase == TouchPhase.Canceled;
+            if (enableTouch && Input.touchCount > 0)
+            {
+                TouchPhase phase = Input.GetTouch(0).phase;
+                return phase == TouchPhase.Ended || phase == TouchPhase.Canceled;
+            }
+
+            return enableMouseInEditor && Input.GetMouseButtonUp(0);
+        }
+        catch (InvalidOperationException)
+        {
+            LogInputBackendWarningOnce();
+            return false;
+        }
+    }
+
+    private void LogInputBackendWarningOnce()
+    {
+        if (inputBackendWarningLogged)
+        {
+            return;
         }
 
-        return enableMouseInEditor && Input.GetMouseButtonUp(0);
-#else
-        return false;
-#endif
+        Debug.LogWarning("[MONITOR][AR] ARInteractionEventTracker no puede leer UnityEngine.Input con la configuracion actual de Input Handling. Activa 'Both' o usa Input Manager para eventos de puntero.");
+        inputBackendWarningLogged = true;
     }
 
     private void UpdateHoverState(bool hasPointer, Vector2 pointerPosition)

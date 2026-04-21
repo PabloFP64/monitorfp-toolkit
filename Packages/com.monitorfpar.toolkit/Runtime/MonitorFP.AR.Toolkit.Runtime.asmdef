@@ -9,12 +9,6 @@
   "overrideReferences": false,
   "precompiledReferences": [],
   "defineConstraints": [],
-  "versionDefines": [
-    {
-      "name": "com.unity.inputsystem",
-      "expression": "1.0.0",
-      "define": "MONITORFP_INPUT_SYSTEM"
-    }
-  ],
+  "versionDefines": [],
   "noEngineReferences": false
 }
