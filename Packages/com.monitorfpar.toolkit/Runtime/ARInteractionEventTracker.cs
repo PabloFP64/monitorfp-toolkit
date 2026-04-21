@@ -1,5 +1,5 @@
 using UnityEngine;
-#if ENABLE_INPUT_SYSTEM
+#if MONITORFP_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 #endif
 
@@ -54,7 +54,7 @@ public class ARInteractionEventTracker : MonoBehaviour
     {
         pointerPosition = Vector2.zero;
 
-#if ENABLE_INPUT_SYSTEM
+#if MONITORFP_INPUT_SYSTEM
         if (enableTouch && Touchscreen.current != null)
         {
             pointerPosition = Touchscreen.current.primaryTouch.position.ReadValue();
@@ -86,7 +86,7 @@ public class ARInteractionEventTracker : MonoBehaviour
 
     private bool IsPointerPressedThisFrame()
     {
-#if ENABLE_INPUT_SYSTEM
+#if MONITORFP_INPUT_SYSTEM
         bool touchPressed = enableTouch && Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame;
         bool mousePressed = enableMouseInEditor && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
         return touchPressed || mousePressed;
@@ -104,7 +104,7 @@ public class ARInteractionEventTracker : MonoBehaviour
 
     private bool IsPointerReleasedThisFrame()
     {
-#if ENABLE_INPUT_SYSTEM
+#if MONITORFP_INPUT_SYSTEM
         bool touchReleased = enableTouch && Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasReleasedThisFrame;
         bool mouseReleased = enableMouseInEditor && Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame;
         return touchReleased || mouseReleased;
