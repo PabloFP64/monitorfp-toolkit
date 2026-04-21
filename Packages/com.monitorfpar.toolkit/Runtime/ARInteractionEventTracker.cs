@@ -1,17 +1,39 @@
 using UnityEngine;
 using System;
+using System.Collections.Generic;
 
 public class ARInteractionEventTracker : MonoBehaviour
 {
+    private struct TrackedTransformState
+    {
+        public Vector3 lastPosition;
+        public Quaternion lastRotation;
+        public float lastMovementTime;
+        public bool isMoving;
+    }
+
     [Header("Deteccion")]
     [SerializeField] private bool enableTouch = true;
     [SerializeField] private bool enableMouseInEditor = true;
     [SerializeField] private float maxRayDistance = 100f;
     [SerializeField] private LayerMask interactionMask = ~0;
 
+    [Header("Eventos de movimiento")]
+    [SerializeField] private bool detectObjectMovement = true;
+    [SerializeField] private float movementRefreshInterval = 1.5f;
+    [SerializeField] private float movementCheckInterval = 0.15f;
+    [SerializeField] private float movementStopDelay = 0.35f;
+    [SerializeField] private float movementPositionThreshold = 0.005f;
+    [SerializeField] private float movementRotationThresholdDeg = 1f;
+    [SerializeField] private int maxTrackedObjects = 256;
+
     private Camera targetCamera;
     private GameObject hoveredObject;
     private bool inputBackendWarningLogged;
+    private float nextRefreshTime;
+    private float nextMovementCheckTime;
+    private readonly List<Transform> trackedTransforms = new List<Transform>();
+    private readonly Dictionary<Transform, TrackedTransformState> trackedStates = new Dictionary<Transform, TrackedTransformState>();
 
     private void Start()
     {
@@ -46,6 +68,145 @@ public class ARInteractionEventTracker : MonoBehaviour
         if (IsPointerReleasedThisFrame())
         {
             RegisterPointerEvent("interaction_release", "Interaccion finalizada", pointerPosition);
+        }
+
+        if (!detectObjectMovement)
+        {
+            return;
+        }
+
+        if (Time.unscaledTime >= nextRefreshTime)
+        {
+            RefreshTrackedObjects();
+            nextRefreshTime = Time.unscaledTime + Mathf.Max(0.25f, movementRefreshInterval);
+        }
+
+        if (Time.unscaledTime >= nextMovementCheckTime)
+        {
+            EvaluateTrackedObjectMovement();
+            nextMovementCheckTime = Time.unscaledTime + Mathf.Max(0.05f, movementCheckInterval);
+        }
+    }
+
+    private void RefreshTrackedObjects()
+    {
+        Collider[] colliders = FindObjectsByType<Collider>(FindObjectsSortMode.None);
+
+        trackedTransforms.Clear();
+        if (colliders == null || colliders.Length == 0)
+        {
+            trackedStates.Clear();
+            return;
+        }
+
+        int mask = interactionMask.value;
+        HashSet<Transform> unique = new HashSet<Transform>();
+
+        for (int i = 0; i < colliders.Length && trackedTransforms.Count < Mathf.Max(1, maxTrackedObjects); i++)
+        {
+            Collider col = colliders[i];
+            if (col == null)
+            {
+                continue;
+            }
+
+            if (((1 << col.gameObject.layer) & mask) == 0)
+            {
+                continue;
+            }
+
+            Transform t = col.attachedRigidbody != null ? col.attachedRigidbody.transform : col.transform;
+            if (t == null || !unique.Add(t))
+            {
+                continue;
+            }
+
+            trackedTransforms.Add(t);
+            if (!trackedStates.ContainsKey(t))
+            {
+                trackedStates[t] = new TrackedTransformState
+                {
+                    lastPosition = t.position,
+                    lastRotation = t.rotation,
+                    lastMovementTime = Time.unscaledTime,
+                    isMoving = false
+                };
+            }
+        }
+
+        // Limpieza de referencias que ya no están presentes.
+        if (trackedStates.Count > trackedTransforms.Count)
+        {
+            HashSet<Transform> current = new HashSet<Transform>(trackedTransforms);
+            List<Transform> toRemove = new List<Transform>();
+            foreach (KeyValuePair<Transform, TrackedTransformState> kv in trackedStates)
+            {
+                if (kv.Key == null || !current.Contains(kv.Key))
+                {
+                    toRemove.Add(kv.Key);
+                }
+            }
+
+            for (int i = 0; i < toRemove.Count; i++)
+            {
+                trackedStates.Remove(toRemove[i]);
+            }
+        }
+    }
+
+    private void EvaluateTrackedObjectMovement()
+    {
+        SessionRecorder recorder = SessionRecorder.GetInstance();
+        if (recorder == null)
+        {
+            return;
+        }
+
+        float now = Time.unscaledTime;
+
+        for (int i = 0; i < trackedTransforms.Count; i++)
+        {
+            Transform t = trackedTransforms[i];
+            if (t == null)
+            {
+                continue;
+            }
+
+            TrackedTransformState state;
+            if (!trackedStates.TryGetValue(t, out state))
+            {
+                state = new TrackedTransformState
+                {
+                    lastPosition = t.position,
+                    lastRotation = t.rotation,
+                    lastMovementTime = now,
+                    isMoving = false
+                };
+            }
+
+            bool movedPosition = Vector3.Distance(state.lastPosition, t.position) >= movementPositionThreshold;
+            bool movedRotation = Quaternion.Angle(state.lastRotation, t.rotation) >= movementRotationThresholdDeg;
+            bool moved = movedPosition || movedRotation;
+
+            if (moved)
+            {
+                if (!state.isMoving)
+                {
+                    recorder.RecordEvent("interaction_move_start", "Movimiento de objeto iniciado", t.name);
+                    state.isMoving = true;
+                }
+
+                state.lastMovementTime = now;
+                state.lastPosition = t.position;
+                state.lastRotation = t.rotation;
+            }
+            else if (state.isMoving && (now - state.lastMovementTime) >= movementStopDelay)
+            {
+                recorder.RecordEvent("interaction_move_stop", "Movimiento de objeto finalizado", t.name);
+                state.isMoving = false;
+            }
+
+            trackedStates[t] = state;
         }
     }
 
