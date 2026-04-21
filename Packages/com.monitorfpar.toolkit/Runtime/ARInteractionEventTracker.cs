@@ -20,6 +20,7 @@ public class ARInteractionEventTracker : MonoBehaviour
 
     [Header("Eventos de movimiento")]
     [SerializeField] private bool detectObjectMovement = true;
+    [SerializeField] private bool logInteractionsToConsole = true;
     [SerializeField] private float movementRefreshInterval = 1.5f;
     [SerializeField] private float movementCheckInterval = 0.15f;
     [SerializeField] private float movementStopDelay = 0.35f;
@@ -55,19 +56,17 @@ public class ARInteractionEventTracker : MonoBehaviour
         bool hasPointer = TryGetPointerPosition(out pointerPosition);
         UpdateHoverState(hasPointer, pointerPosition);
 
-        if (!hasPointer)
+        if (hasPointer)
         {
-            return;
-        }
+            if (IsPointerPressedThisFrame())
+            {
+                RegisterPointerEvent("interaction_press", "Interaccion iniciada", pointerPosition);
+            }
 
-        if (IsPointerPressedThisFrame())
-        {
-            RegisterPointerEvent("interaction_press", "Interaccion iniciada", pointerPosition);
-        }
-
-        if (IsPointerReleasedThisFrame())
-        {
-            RegisterPointerEvent("interaction_release", "Interaccion finalizada", pointerPosition);
+            if (IsPointerReleasedThisFrame())
+            {
+                RegisterPointerEvent("interaction_release", "Interaccion finalizada", pointerPosition);
+            }
         }
 
         if (!detectObjectMovement)
@@ -192,7 +191,7 @@ public class ARInteractionEventTracker : MonoBehaviour
             {
                 if (!state.isMoving)
                 {
-                    recorder.RecordEvent("interaction_move_start", "Movimiento de objeto iniciado", t.name);
+                    RecordInteractionEvent("interaction_move_start", "Movimiento de objeto iniciado", t.name);
                     state.isMoving = true;
                 }
 
@@ -202,7 +201,7 @@ public class ARInteractionEventTracker : MonoBehaviour
             }
             else if (state.isMoving && (now - state.lastMovementTime) >= movementStopDelay)
             {
-                recorder.RecordEvent("interaction_move_stop", "Movimiento de objeto finalizado", t.name);
+                RecordInteractionEvent("interaction_move_stop", "Movimiento de objeto finalizado", t.name);
                 state.isMoving = false;
             }
 
@@ -306,12 +305,12 @@ public class ARInteractionEventTracker : MonoBehaviour
 
         if (hoveredObject != null)
         {
-            recorder.RecordEvent("interaction_hover_exit", "Hover finalizado", hoveredObject.name);
+            RecordInteractionEvent("interaction_hover_exit", "Hover finalizado", hoveredObject.name);
         }
 
         if (currentHover != null)
         {
-            recorder.RecordEvent("interaction_hover_enter", "Hover iniciado", currentHover.name);
+            RecordInteractionEvent("interaction_hover_enter", "Hover iniciado", currentHover.name);
         }
 
         hoveredObject = currentHover;
@@ -327,7 +326,7 @@ public class ARInteractionEventTracker : MonoBehaviour
 
         GameObject target = RaycastObject(pointerPosition);
         string objectName = target != null ? target.name : "none";
-        recorder.RecordEvent(eventType, description, objectName);
+        RecordInteractionEvent(eventType, description, objectName);
     }
 
     private GameObject RaycastObject(Vector2 screenPosition)
@@ -339,5 +338,22 @@ public class ARInteractionEventTracker : MonoBehaviour
         }
 
         return null;
+    }
+
+    private void RecordInteractionEvent(string eventType, string description, string objectName)
+    {
+        SessionRecorder recorder = SessionRecorder.GetInstance();
+        if (recorder == null)
+        {
+            return;
+        }
+
+        recorder.RecordEvent(eventType, description, objectName);
+
+        if (logInteractionsToConsole)
+        {
+            string obj = string.IsNullOrEmpty(objectName) ? "none" : objectName;
+            Debug.Log($"[MONITOR][AR][EVENT] {eventType} | {description} | object={obj}");
+        }
     }
 }
