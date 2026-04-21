@@ -1,4 +1,7 @@
 using UnityEngine;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 
 public class ARInteractionEventTracker : MonoBehaviour
 {
@@ -36,12 +39,12 @@ public class ARInteractionEventTracker : MonoBehaviour
             return;
         }
 
-        if (Input.GetMouseButtonDown(0))
+        if (IsPointerPressedThisFrame())
         {
             RegisterPointerEvent("interaction_press", "Interaccion iniciada", pointerPosition);
         }
 
-        if (Input.GetMouseButtonUp(0))
+        if (IsPointerReleasedThisFrame())
         {
             RegisterPointerEvent("interaction_release", "Interaccion finalizada", pointerPosition);
         }
@@ -50,6 +53,20 @@ public class ARInteractionEventTracker : MonoBehaviour
     private bool TryGetPointerPosition(out Vector2 pointerPosition)
     {
         pointerPosition = Vector2.zero;
+
+#if ENABLE_INPUT_SYSTEM
+        if (enableTouch && Touchscreen.current != null)
+        {
+            pointerPosition = Touchscreen.current.primaryTouch.position.ReadValue();
+            return true;
+        }
+
+        if (enableMouseInEditor && Mouse.current != null)
+        {
+            pointerPosition = Mouse.current.position.ReadValue();
+            return true;
+        }
+#elif ENABLE_LEGACY_INPUT_MANAGER
 
         if (enableTouch && Input.touchCount > 0)
         {
@@ -62,8 +79,46 @@ public class ARInteractionEventTracker : MonoBehaviour
             pointerPosition = Input.mousePosition;
             return true;
         }
+#endif
 
         return false;
+    }
+
+    private bool IsPointerPressedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        bool touchPressed = enableTouch && Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasPressedThisFrame;
+        bool mousePressed = enableMouseInEditor && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
+        return touchPressed || mousePressed;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+        if (enableTouch && Input.touchCount > 0)
+        {
+            return Input.GetTouch(0).phase == TouchPhase.Began;
+        }
+
+        return enableMouseInEditor && Input.GetMouseButtonDown(0);
+#else
+        return false;
+#endif
+    }
+
+    private bool IsPointerReleasedThisFrame()
+    {
+#if ENABLE_INPUT_SYSTEM
+        bool touchReleased = enableTouch && Touchscreen.current != null && Touchscreen.current.primaryTouch.press.wasReleasedThisFrame;
+        bool mouseReleased = enableMouseInEditor && Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame;
+        return touchReleased || mouseReleased;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+        if (enableTouch && Input.touchCount > 0)
+        {
+            TouchPhase phase = Input.GetTouch(0).phase;
+            return phase == TouchPhase.Ended || phase == TouchPhase.Canceled;
+        }
+
+        return enableMouseInEditor && Input.GetMouseButtonUp(0);
+#else
+        return false;
+#endif
     }
 
     private void UpdateHoverState(bool hasPointer, Vector2 pointerPosition)
