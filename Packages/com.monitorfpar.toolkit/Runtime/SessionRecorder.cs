@@ -1,6 +1,10 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+#if MONITORFP_XR_INTERACTION
+using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
+#endif
 
 [System.Serializable]
 public struct PositionSample
@@ -65,6 +69,11 @@ public class SessionRecorder : MonoBehaviour
     private int currentFramerate = 0;
     private long totalCaptureLatency = 0;
     private long framesCaptured = 0;
+    private float nextInteractableScanTime;
+
+#if MONITORFP_XR_INTERACTION
+    private readonly List<XRBaseInteractable> trackedInteractables = new List<XRBaseInteractable>();
+#endif
 
     private readonly object historyLock = new object();
 
@@ -85,6 +94,9 @@ public class SessionRecorder : MonoBehaviour
     {
         sessionStartMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         RecordEvent("session_start", "Sesión iniciada");
+#if MONITORFP_XR_INTERACTION
+        RefreshXRInteractableSubscriptions();
+#endif
     }
 
     private void Update()
@@ -98,6 +110,14 @@ public class SessionRecorder : MonoBehaviour
             lastFrameCount = frameCount;
             frameTimer -= 1f;
         }
+
+#if MONITORFP_XR_INTERACTION
+        if (Time.unscaledTime >= nextInteractableScanTime)
+        {
+            RefreshXRInteractableSubscriptions();
+            nextInteractableScanTime = Time.unscaledTime + Mathf.Max(0.5f, xrInteractableScanInterval);
+        }
+#endif
     }
 
     public void RecordPositionSample(Vector3 position)
@@ -208,4 +228,127 @@ public class SessionRecorder : MonoBehaviour
     {
         return instance;
     }
+
+    private void OnDestroy()
+    {
+#if MONITORFP_XR_INTERACTION
+        UnsubscribeXRInteractables();
+#endif
+    }
+
+#if MONITORFP_XR_INTERACTION
+    private void RefreshXRInteractableSubscriptions()
+    {
+        if (!logXRSelectEvents && !logXRHoverEvents)
+        {
+            UnsubscribeXRInteractables();
+            return;
+        }
+
+        XRBaseInteractable[] interactables = UnityEngine.Object.FindObjectsByType<XRBaseInteractable>(FindObjectsSortMode.None);
+        if (interactables == null || interactables.Length == 0)
+        {
+            UnsubscribeXRInteractables();
+            return;
+        }
+
+        HashSet<XRBaseInteractable> current = new HashSet<XRBaseInteractable>(interactables);
+
+        for (int i = trackedInteractables.Count - 1; i >= 0; i--)
+        {
+            XRBaseInteractable tracked = trackedInteractables[i];
+            if (tracked == null || !current.Contains(tracked))
+            {
+                if (tracked != null)
+                {
+                    UnsubscribeInteractable(tracked);
+                }
+
+                trackedInteractables.RemoveAt(i);
+            }
+        }
+
+        foreach (XRBaseInteractable interactable in interactables)
+        {
+            if (interactable == null || trackedInteractables.Contains(interactable))
+            {
+                continue;
+            }
+
+            SubscribeInteractable(interactable);
+            trackedInteractables.Add(interactable);
+        }
+    }
+
+    private void SubscribeInteractable(XRBaseInteractable interactable)
+    {
+        if (logXRSelectEvents)
+        {
+            interactable.selectEntered.AddListener(OnSelectEntered);
+            interactable.selectExited.AddListener(OnSelectExited);
+        }
+
+        if (logXRHoverEvents)
+        {
+            interactable.hoverEntered.AddListener(OnHoverEntered);
+            interactable.hoverExited.AddListener(OnHoverExited);
+        }
+    }
+
+    private void UnsubscribeInteractable(XRBaseInteractable interactable)
+    {
+        interactable.selectEntered.RemoveListener(OnSelectEntered);
+        interactable.selectExited.RemoveListener(OnSelectExited);
+        interactable.hoverEntered.RemoveListener(OnHoverEntered);
+        interactable.hoverExited.RemoveListener(OnHoverExited);
+    }
+
+    private void UnsubscribeXRInteractables()
+    {
+        for (int i = trackedInteractables.Count - 1; i >= 0; i--)
+        {
+            XRBaseInteractable interactable = trackedInteractables[i];
+            if (interactable != null)
+            {
+                UnsubscribeInteractable(interactable);
+            }
+        }
+
+        trackedInteractables.Clear();
+    }
+
+    private void OnSelectEntered(SelectEnterEventArgs args)
+    {
+        string objectName = GetInteractableName(args != null ? args.interactableObject : null);
+        RecordEvent("interaction_select_enter", "Objeto seleccionado", objectName);
+    }
+
+    private void OnSelectExited(SelectExitEventArgs args)
+    {
+        string objectName = GetInteractableName(args != null ? args.interactableObject : null);
+        RecordEvent("interaction_select_exit", "Objeto liberado", objectName);
+    }
+
+    private void OnHoverEntered(HoverEnterEventArgs args)
+    {
+        string objectName = GetInteractableName(args != null ? args.interactableObject : null);
+        RecordEvent("interaction_hover_enter", "Hover iniciado", objectName);
+    }
+
+    private void OnHoverExited(HoverExitEventArgs args)
+    {
+        string objectName = GetInteractableName(args != null ? args.interactableObject : null);
+        RecordEvent("interaction_hover_exit", "Hover finalizado", objectName);
+    }
+
+    private static string GetInteractableName(IXRInteractable interactable)
+    {
+        if (interactable == null || interactable.transform == null)
+        {
+            return "unknown";
+        }
+
+        return interactable.transform.name;
+    }
+#endif
 }

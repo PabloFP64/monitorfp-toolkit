@@ -1,8 +1,8 @@
 {
   "name": "com.monitorfpar.toolkit",
   "version": "0.1.0",
-  "displayName": "MonitorFP AR Toolkit",
-  "description": "AR package for MonitorFP Toolkit. Initial scaffold for AR-specific tools.",
+  "displayName": "MonitorFP Toolkit",
+  "description": "Unified MonitorFP toolkit for VR and AR telemetry, session recording, map capture and web viewer helpers.",
   "unity": "6000.3",
   "author": {
     "name": "Pablo Fernández de la Puente Jaureguízar"

@@ -9,6 +9,12 @@
   "overrideReferences": false,
   "precompiledReferences": [],
   "defineConstraints": [],
-  "versionDefines": [],
+  "versionDefines": [
+    {
+      "name": "com.unity.xr.interaction.toolkit",
+      "expression": "0.0.0",
+      "define": "MONITORFP_XR_INTERACTION"
+    }
+  ],
   "noEngineReferences": false
 }

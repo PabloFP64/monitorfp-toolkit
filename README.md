@@ -2,18 +2,12 @@
 
 Con este toolkit puedes exponer por HTTP:
 
-### VR:
+### VR y AR:
 - video en vivo (MJPEG)
 - telemetria de posicion/rotacion
 - estadisticas y eventos de sesion
 - mapa 2D de recorrido (planta XZ)
 - dashboard web listo para usar
-
-### AR:
-- video en vivo (MJPEG)
-- telemetria de posicion/rotacion (XYZ)
-- estadisticas de sesion y recorrido
-- dashboard web basico
 
 
 ## 1) Requisitos
@@ -24,8 +18,8 @@ Con este toolkit puedes exponer por HTTP:
 
 Notas:
 
-- VR package: requiere `com.unity.xr.interaction.toolkit`
-- AR package: no lo requiere para telemetria/stream base
+- El paquete detecta automaticamente si `com.unity.xr.interaction.toolkit` esta disponible y habilita los eventos XR.
+- Sin XR, sigue funcionando como telemetria, streaming, eventos de movimiento y observacion basicos.
 
 ## 2) Instalacion (elige una opcion)
 
@@ -33,10 +27,9 @@ Instalacion desde Git en Package Manager:
 
 1. Unity -> Window -> Package Manager
 2. `+` -> Add package from git URL
-3. Elige segun tu proyecto:
+3. Instala este unico package:
 
-- VR package : `https://github.com/PabloFP64/monitorfp-toolkit.git?path=/Packages/com.monitorfpvr.toolkit`
-- AR package : `https://github.com/PabloFP64/monitorfp-toolkit.git?path=/Packages/com.monitorfpar.toolkit`
+- `https://github.com/PabloFP64/monitorfp-toolkit.git?path=/Packages/com.monitorfpar.toolkit`
 
 ## 3) Setup minimo en escena
 
@@ -60,7 +53,7 @@ Si ves dashboard y video, ya funciona.
 
 Usa el menu de Unity:
 
-`MonitorFP > VR > Crear Camara Top Down para Mapa`
+`MonitorFP > Crear Camara Top Down para Mapa`
 
 Esto crea una camara ortográfica cenital y:
 
@@ -69,9 +62,9 @@ Esto crea una camara ortográfica cenital y:
 - ajusta `mapWorldMinXZ` / `mapWorldMaxXZ`
 - deja la camara en `Target Display 2` para no pisar la principal
 
-Setup automatico de escena (VR):
+Setup automatico de escena:
 
-`MonitorFP > VR > Crear Setup Minimo en Escena`
+`MonitorFP > Crear Setup Minimo en Escena`
 
 Este comando crea automaticamente:
 
@@ -115,7 +108,7 @@ Prioridad de origen del mapa:
 - inicio de sesion
 - historial de posicion
 - eventos personalizados via `RecordEvent(...)`
-- eventos XR de interaccion (select enter/exit)
+- eventos XR de interaccion (select enter/exit) si el paquete XR esta instalado
 
 En la web, los eventos pueden incluir nombre de objeto en formato `[obj: Nombre]`.
 
@@ -184,7 +177,7 @@ Campos utiles en `/map-config.json`:
   - ajustar `Map Flip X` / `Map Flip Y`
   - ajustar `Map Rotation Degrees`
 - Eventos sin nombre de objeto:
-  - verificar interactables XR en escena
+  - verificar interactables XR en escena si estas en VR
   - confirmar `SessionRecorder` activo
 
 

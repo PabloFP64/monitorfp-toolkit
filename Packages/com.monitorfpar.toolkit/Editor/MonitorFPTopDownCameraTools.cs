@@ -5,8 +5,8 @@ using UnityEngine;
 
 public static class MonitorFPTopDownCameraTools
 {
-    private const string MenuPathTopDown = "MonitorFP/AR/Crear Camara Top Down para Mapa";
-    private const string MenuPathSetup = "MonitorFP/AR/Crear Setup Minimo en Escena";
+    private const string MenuPathTopDown = "MonitorFP/Crear Camara Top Down para Mapa";
+    private const string MenuPathSetup = "MonitorFP/Crear Setup Minimo en Escena";
     private const float DefaultHeight = 8f;
     private const float DefaultOrthoSize = 6f;
 
@@ -117,7 +117,7 @@ public static class MonitorFPTopDownCameraTools
             }
         }
 
-        Debug.Log("[MONITOR][AR] Setup minimo creado: MonitorServer + SessionRecorder + UserTracker + InteractionTracker.");
+        Debug.Log("[MONITOR] Setup minimo creado: MonitorServer + SessionRecorder + UserTracker + InteractionTracker.");
     }
 
     private static Component EnsureRuntimeComponentOnNamedObject(string gameObjectName, string componentTypeName)
