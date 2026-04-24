@@ -55,6 +55,11 @@ public class SessionRecorder : MonoBehaviour
     [SerializeField] private int maxPositionSamples = 20000;
     [SerializeField] private int maxEvents = 1000;
 
+    [Header("Eventos de interaccion")]
+    [SerializeField] private bool logXRSelectEvents = true;
+    [SerializeField] private bool logXRHoverEvents = false;
+    [SerializeField] private float xrInteractableScanInterval = 2f;
+
     private List<PositionSample> positionHistory = new List<PositionSample>();
     private List<SessionEvent> events = new List<SessionEvent>();
     
