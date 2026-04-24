@@ -1,5 +1,5 @@
 {
-  "name": "com.monitorfpar.toolkit",
+  "name": "com.monitorfp.toolkit",
   "version": "0.1.0",
   "displayName": "MonitorFP Toolkit",
   "description": "Unified MonitorFP toolkit for VR and AR telemetry, session recording, map capture and web viewer helpers.",

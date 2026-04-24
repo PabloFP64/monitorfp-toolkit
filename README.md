@@ -29,7 +29,7 @@ Instalacion desde Git en Package Manager:
 2. `+` -> Add package from git URL
 3. Instala este unico package:
 
-- `https://github.com/PabloFP64/monitorfp-toolkit.git?path=/Packages/com.monitorfpar.toolkit`
+- `https://github.com/PabloFP64/monitorfp-toolkit.git?path=/Packages/com.monitorfp.toolkit`
 
 ## 3) Setup minimo en escena
 
