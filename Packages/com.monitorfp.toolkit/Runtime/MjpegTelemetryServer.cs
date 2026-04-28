@@ -554,7 +554,23 @@ public class MjpegTelemetryServer : MonoBehaviour
                         HandleObservationTrackingCommand(stream, true);
                         return;
                     }
+                        if (path.StartsWith("/record/start", StringComparison.OrdinalIgnoreCase))
+                        {
+                            HandleRecordingCommand(stream, true);
+                            return;
+                        }
 
+                        if (path.StartsWith("/record/stop", StringComparison.OrdinalIgnoreCase))
+                        {
+                            HandleRecordingCommand(stream, false);
+                            return;
+                        }
+
+                        if (path.StartsWith("/record/marker", StringComparison.OrdinalIgnoreCase))
+                        {
+                            HandleRecordingMarker(stream, path);
+                            return;
+                        }
                     if (path.StartsWith("/observation/stop", StringComparison.OrdinalIgnoreCase))
                     {
                         HandleObservationTrackingCommand(stream, false);
@@ -564,6 +580,12 @@ public class MjpegTelemetryServer : MonoBehaviour
                     if (path.StartsWith("/observation/state", StringComparison.OrdinalIgnoreCase))
                     {
                         SendObservationState(stream);
+                        return;
+                    }
+
+                    if (path.StartsWith("/events.json", StringComparison.OrdinalIgnoreCase))
+                    {
+                        SendEventsConfig(stream);
                         return;
                     }
 
@@ -899,6 +921,14 @@ public class MjpegTelemetryServer : MonoBehaviour
                     <button class=""obs-button stop"" onclick=""stopObservationTracking()"">Parar seguimiento observación</button>
                     <span id=""obsStatus"" class=""obs-status"">Tracking: inactivo</span>
                 </div>
+                <div class=""observation-controls"" style=""margin-top:8px;"">
+                    <button class=""obs-button start"" onclick=""startRecording()"">Iniciar grabación</button>
+                    <button class=""obs-button stop"" onclick=""stopRecording()"">Parar grabación</button>
+                    <label style=""font-size:12px; margin-left:8px;""><input id=""browserRecordToggle"" type=""checkbox"" checked> Grabar en navegador (.webm)</label>
+                    <label style=""font-size:12px; margin-left:8px;""><input id=""nativeRecordToggle"" type=""checkbox""> Intentar grabación nativa Android</label>
+                </div>
+                <div id=""eventButtons"" style=""margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;""></div>
+                <canvas id=""captureCanvas"" width=""960"" height=""540"" style=""display:none;""></canvas>
                 <div class=""events-log"" id=""eventsList"">
                     <div class=""empty-log"">Esperando eventos...</div>
                 </div>
@@ -1325,6 +1355,145 @@ public class MjpegTelemetryServer : MonoBehaviour
             }
         }
 
+        let browserRecording = false;
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let browserMarkers = [];
+        let browserRecordStart = 0;
+        const captureCanvasEl = document.getElementById('captureCanvas');
+        const captureCtx = captureCanvasEl ? captureCanvasEl.getContext('2d') : null;
+
+        async function startRecording() {
+            try {
+                await fetch(baseUrl + '/record/start?t=' + Date.now());
+            } catch (e) {
+                console.warn('No se pudo iniciar grabación (server)', e);
+            }
+
+            if (document.getElementById('browserRecordToggle') && document.getElementById('browserRecordToggle').checked) {
+                startBrowserRecording();
+            }
+        }
+
+        function startBrowserRecording() {
+            if (browserRecording) return;
+            const img = document.getElementById('videoFrame');
+            if (!captureCanvasEl || !captureCtx || !img) {
+                console.warn('No canvas/img available for browser recording');
+                return;
+            }
+
+            browserRecording = true;
+            recordedChunks = [];
+            browserMarkers = [];
+            browserRecordStart = Date.now();
+
+            captureCanvasEl.width = img.naturalWidth || 960;
+            captureCanvasEl.height = img.naturalHeight || 540;
+
+            const stream = captureCanvasEl.captureStream(30);
+            try {
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp8' });
+            } catch (e) {
+                try { mediaRecorder = new MediaRecorder(stream); } catch (e2) { console.warn('MediaRecorder unavailable', e2); browserRecording = false; return; }
+            }
+
+            mediaRecorder.ondataavailable = (ev) => { if (ev.data && ev.data.size > 0) recordedChunks.push(ev.data); };
+            mediaRecorder.start();
+
+            const drawFn = () => {
+                if (!browserRecording) return;
+                try { captureCtx.drawImage(img, 0, 0, captureCanvasEl.width, captureCanvasEl.height); } catch (e) { }
+                requestAnimationFrame(drawFn);
+            };
+            drawFn();
+        }
+
+        async function stopRecording() {
+            if (browserRecording) await stopBrowserRecording();
+
+            try {
+                const resp = await fetch(baseUrl + '/record/stop?t=' + Date.now());
+                if (resp.ok) {
+                    const json = await resp.json();
+                    const srt = generateSrtFromServer(json);
+                    downloadBlob(new Blob([srt], { type: 'text/plain' }), 'markers_server.srt');
+                }
+            } catch (e) {
+                console.warn('No se pudo parar grabación (server)', e);
+            }
+        }
+
+        function stopBrowserRecording() {
+            return new Promise((resolve) => {
+                if (!browserRecording) { resolve(); return; }
+                browserRecording = false;
+                if (!mediaRecorder) { resolve(); return; }
+                mediaRecorder.onstop = () => {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    downloadBlob(blob, 'recording_browser.webm');
+                    const srt = generateSrtFromBrowser();
+                    downloadBlob(new Blob([srt], { type: 'text/plain' }), 'markers_browser.srt');
+                    resolve();
+                };
+                mediaRecorder.stop();
+            });
+        }
+
+        function onEventButtonClick(label) {
+            try { fetch(baseUrl + '/record/marker?label=' + encodeURIComponent(label)); } catch (e) { }
+            if (browserRecording) {
+                browserMarkers.push({ ms: Date.now() - browserRecordStart, label: label });
+            }
+        }
+
+        function fetchEventsConfig() {
+            fetch(baseUrl + '/events.json?t=' + Date.now()).then(r => r.json()).then(j => {
+                const container = document.getElementById('eventButtons');
+                if (!container) return;
+                if (!j || !j.labels) { container.innerHTML = ''; return; }
+                container.innerHTML = j.labels.map(l => '<button class=""obs-button"" style=""font-size:12px;"" onclick=""onEventButtonClick(\'' + escapeHtml(l) + '\')"">' + escapeHtml(l) + '</button>').join('');
+            }).catch(() => { });
+        }
+
+        function generateSrtFromBrowser() {
+            let out = '';
+            for (let i = 0; i < browserMarkers.length; i++) {
+                const idx = i + 1;
+                const startMs = browserMarkers[i].ms;
+                const endMs = startMs + 1000;
+                out += idx + '\n' + formatSrtTime(startMs) + ' --> ' + formatSrtTime(endMs) + '\n' + browserMarkers[i].label + '\n\n';
+            }
+            return out;
+        }
+
+        function generateSrtFromServer(json) {
+            if (!json || !json.markers) return '';
+            let out = '';
+            for (let i = 0; i < json.markers.length; i++) {
+                const idx = i + 1;
+                const startMs = json.markers[i].ms;
+                const endMs = startMs + 1000;
+                out += idx + '\n' + formatSrtTime(startMs) + ' --> ' + formatSrtTime(endMs) + '\n' + json.markers[i].label + '\n\n';
+            }
+            return out;
+        }
+
+        function formatSrtTime(ms) {
+            const d = new Date(ms);
+            const hh = String(d.getUTCHours()).padStart(2, '0');
+            const mm = String(d.getUTCMinutes()).padStart(2, '0');
+            const ss = String(d.getUTCSeconds()).padStart(2, '0');
+            const ms3 = String(Math.floor((ms % 1000))).padStart(3, '0');
+            return hh + ':' + mm + ':' + ss + ',' + ms3;
+        }
+
+        function downloadBlob(blob, filename) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+        }
+
         function escapeHtml(text) {
             return String(text)
                 .replace(/&/g, '&amp;')
@@ -1365,6 +1534,7 @@ public class MjpegTelemetryServer : MonoBehaviour
         updateFrame();
         updateStats();
         updateMetrics();
+        fetchEventsConfig();
 
         window.addEventListener('resize', () => {
             resizeMapCanvas();
@@ -1392,7 +1562,7 @@ public class MjpegTelemetryServer : MonoBehaviour
 
     private void SendInfo(NetworkStream stream)
     {
-        const string body = "MonitorFP Toolkit server running. Endpoints: /, /frame.jpg, /stream.mjpg, /state.json, /stats.json, /metrics.json, /map-config.json, /map.png, /observation/start, /observation/stop, /observation/state";
+        const string body = "MonitorFP Toolkit server running. Endpoints: /, /frame.jpg, /stream.mjpg, /state.json, /stats.json, /metrics.json, /map-config.json, /map.png, /observation/start, /observation/stop, /observation/state, /record/start, /record/stop, /record/marker, /events.json";
         byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
 
         string headers =
@@ -1423,6 +1593,26 @@ public class MjpegTelemetryServer : MonoBehaviour
 
         WriteAscii(stream, headers);
         stream.Write(frame, 0, frame.Length);
+    }
+
+    private void SendEventsConfig(NetworkStream stream)
+    {
+        ExperimentalEventConfig cfg = UnityEngine.Object.FindObjectOfType<ExperimentalEventConfig>();
+        string[] labels = cfg != null && cfg.eventLabels != null ? cfg.eventLabels.ToArray() : new string[0];
+
+        var payload = new { labels = labels };
+        string json = JsonUtility.ToJson(payload);
+        byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
+
+        string headers =
+            "HTTP/1.1 200 OK\r\n" +
+            "Content-Type: application/json; charset=utf-8\r\n" +
+            "Cache-Control: no-store\r\n" +
+            $"Content-Length: {jsonBytes.Length}\r\n" +
+            "Connection: close\r\n\r\n";
+
+        WriteAscii(stream, headers);
+        stream.Write(jsonBytes, 0, jsonBytes.Length);
     }
 
     private void SendState(NetworkStream stream)
@@ -1664,6 +1854,93 @@ public class MjpegTelemetryServer : MonoBehaviour
 
         WriteAscii(stream, headers);
         stream.Write(jsonBytes, 0, jsonBytes.Length);
+    }
+
+    private void HandleRecordingCommand(NetworkStream stream, bool start)
+    {
+        RecordingManager manager = RecordingManager.Instance;
+        if (manager == null)
+        {
+            SendServiceUnavailable(stream, "RecordingManager not available");
+            return;
+        }
+
+        if (start)
+        {
+            manager.StartRecording();
+            byte[] payload = Encoding.ASCII.GetBytes("OK");
+            WriteAscii(stream, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + payload.Length + "\r\n\r\n");
+            stream.Write(payload, 0, payload.Length);
+            return;
+        }
+
+        manager.StopRecording();
+        var data = manager.GetRecordingData();
+        var markers = data.markers;
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.Append('{');
+        sb.Append("\"startMs\":").Append(data.startMs).Append(',');
+        sb.Append("\"markers\":[");
+        bool first = true;
+        foreach (var m in markers)
+        {
+            if (!first) sb.Append(',');
+            first = false;
+            sb.Append('{');
+            sb.Append("\"ms\":").Append(m.ms).Append(',');
+            sb.Append("\"label\":\"").Append(EscapeJson(m.label)).Append("\"");
+            sb.Append('}');
+        }
+        sb.Append(']');
+        sb.Append('}');
+
+        string json = sb.ToString();
+        byte[] body = Encoding.UTF8.GetBytes(json);
+        WriteAscii(stream, "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: " + body.Length + "\r\n\r\n");
+        stream.Write(body, 0, body.Length);
+    }
+
+    private void HandleRecordingMarker(NetworkStream stream, string path)
+    {
+        // read marker label from query ?label=...
+        string label = "marker";
+        try
+        {
+            int q = path.IndexOf('?');
+            if (q >= 0)
+            {
+                string qs = path.Substring(q + 1);
+                var parts = qs.Split('&');
+                foreach (var p in parts)
+                {
+                    var kv = p.Split('=');
+                    if (kv.Length == 2 && kv[0] == "label")
+                    {
+                        label = Uri.UnescapeDataString(kv[1]);
+                    }
+                }
+            }
+        }
+        catch { }
+
+        RecordingManager manager = RecordingManager.Instance;
+        if (manager == null)
+        {
+            SendServiceUnavailable(stream, "RecordingManager not available");
+            return;
+        }
+
+        manager.AddMarker(label);
+        byte[] payload = Encoding.ASCII.GetBytes("OK");
+        WriteAscii(stream, "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " + payload.Length + "\r\n\r\n");
+        stream.Write(payload, 0, payload.Length);
+    }
+
+    private static string EscapeJson(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return string.Empty;
+        return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r");
     }
 
     private byte[] GetLatestFrame()

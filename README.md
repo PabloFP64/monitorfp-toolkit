@@ -218,3 +218,32 @@ Campos utiles en `/map-config.json`:
   - confirmar `SessionRecorder` activo
 
 
+## 12) Opcional: Grabación nativa Android / Quest
+
+Este proyecto soporta llamadas a un plugin nativo Android/Quest para iniciar/parar grabación en el propio dispositivo, pero NO está activado por defecto — la grabación web (`MediaRecorder` sobre el canvas) es la opción recomendada por su simplicidad.
+
+Cómo funciona la integración nativa (resumen):
+
+- `RecordingManager` (componente Unity) contiene las llamadas nativas. Por defecto `enableAndroidRecording` está en `false`.
+- Si activas `enableAndroidRecording = true` en el inspector, `RecordingManager` llamará a la clase Java estática `com.monitorfp.recorder.RecorderBridge` con los métodos esperados:
+  - `public static void startRecording(Activity activity, boolean lowQuality)` — iniciar grabación en dispositivo
+  - `public static void stopRecording()` — parar grabación
+
+Recomendaciones para integrar un plugin nativo:
+
+1. Elige uno de los proyectos community (ejemplos):
+   - https://github.com/thanh-nguyen-kim/Android_Screen_Recorder_Plugin
+   - https://github.com/t-34400/QuestMediaProjection
+
+2. Empaqueta la librería Java/Kotlin como `.aar` y añade el `.aar` a `Assets/Plugins/Android/` (o pon el código en un Android Library module y compílalo junto al proyecto Unity).
+
+3. Implementa la clase `com.monitorfp.recorder.RecorderBridge` con los métodos mencionados. El método `startRecording` debe solicitar permisos si es necesario y empezar la captura; `stopRecording` debe detenerla y guardar el archivo en almacenamiento del dispositivo.
+
+4. En Unity, añade `RecordingManager` a un GameObject (por ejemplo `MonitorServer`) y deja `enableAndroidRecording` desactivado hasta que confirmes el plugin y los permisos funcionan correctamente.
+
+5. Para minimizar impacto si lo activas en pruebas: deja `androidLowQuality = true` para reducir bitrate/resolución.
+
+Notas finales:
+- Mantén `enableAndroidRecording` en `false` por defecto — la solución web integrada (`.webm` + `.srt`) es suficiente para la mayoría de experimentos y evita problemas de permisos y compatibilidad.
+
+
