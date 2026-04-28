@@ -115,6 +115,7 @@ En la web, los eventos pueden incluir nombre de objeto en formato `[obj: Nombre]
 Si quieres hover XR tambien:
 
 - activa `logXRHoverEvents` en `SessionRecorder`
+- para trazas AR por consola, activa `logInteractionsToConsole` en `ARInteractionEventTracker` (por defecto viene en `false`)
 
 Ejemplo de evento personalizado:
 
@@ -152,6 +153,10 @@ En el dashboard web:
   - tiempo total observado
   - veces detectado en zona central
   - porcentaje de tiempo en zona central
+
+Para depurar por consola el sistema de observacion:
+
+- activa `logObservationEventsToConsole` en `ObservationTracker` (por defecto viene en `false`)
 
 ## 8) Endpoints HTTP
 

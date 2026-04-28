@@ -21,6 +21,7 @@ public class ObservationTracker : MonoBehaviour
     private static ObservationTracker instance;
 
     [SerializeField] private ObservationTrackingSettings settings;
+    [SerializeField] private bool logObservationEventsToConsole = false;
 
     private readonly Dictionary<InterestingGameObject, ObservationState> tracked = new Dictionary<InterestingGameObject, ObservationState>();
     private readonly object snapshotLock = new object();
@@ -133,6 +134,11 @@ public class ObservationTracker : MonoBehaviour
                     {
                         state.firstSeenAtSeconds = elapsedSinceStart;
                     }
+
+                    if (logObservationEventsToConsole)
+                    {
+                        Debug.Log($"[MONITOR][OBS] START {marker.DisplayName} | t={elapsedSinceStart:F2}s | center={center}");
+                    }
                 }
 
                 state.totalObservedSeconds += dt;
@@ -156,6 +162,10 @@ public class ObservationTracker : MonoBehaviour
             {
                 float segment = Mathf.Max(0f, elapsedSinceStart - state.observationSegmentStart);
                 state.segments.Add(segment);
+                if (logObservationEventsToConsole)
+                {
+                    Debug.Log($"[MONITOR][OBS] STOP  {marker.DisplayName} | segment={segment:F2}s");
+                }
                 state.currentlyObserved = false;
                 state.currentlyCenter = false;
             }
@@ -231,6 +241,10 @@ public class ObservationTracker : MonoBehaviour
         }
 
         tracked[marker] = new ObservationState { marker = marker };
+        if (logObservationEventsToConsole)
+        {
+            Debug.Log($"[MONITOR][OBS] Registrado objeto interesante: {marker.DisplayName}");
+        }
         RebuildSnapshot();
     }
 
@@ -349,6 +363,11 @@ public class ObservationTracker : MonoBehaviour
         trackingActive = true;
         trackingStartMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 
+        if (logObservationEventsToConsole)
+        {
+            Debug.Log($"[MONITOR][OBS] Tracking iniciado. Objetos registrados: {tracked.Count}");
+        }
+
         foreach (ObservationState state in tracked.Values)
         {
             state.currentlyObserved = false;
@@ -386,6 +405,10 @@ public class ObservationTracker : MonoBehaviour
         }
 
         trackingActive = false;
+        if (logObservationEventsToConsole)
+        {
+            Debug.Log("[MONITOR][OBS] Tracking detenido.");
+        }
         RebuildSnapshot();
     }
 

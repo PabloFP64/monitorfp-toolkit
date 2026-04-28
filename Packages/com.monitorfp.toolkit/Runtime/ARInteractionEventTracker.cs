@@ -20,7 +20,7 @@ public class ARInteractionEventTracker : MonoBehaviour
 
     [Header("Eventos de movimiento")]
     [SerializeField] private bool detectObjectMovement = true;
-    [SerializeField] private bool logInteractionsToConsole = true;
+    [SerializeField] private bool logInteractionsToConsole = false;
     [SerializeField] private float movementRefreshInterval = 1.5f;
     [SerializeField] private float movementCheckInterval = 0.15f;
     [SerializeField] private float movementStopDelay = 0.35f;
