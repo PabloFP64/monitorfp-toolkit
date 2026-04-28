@@ -1383,6 +1383,8 @@ public class MjpegTelemetryServer : MonoBehaviour
         let recordedChunks = [];
         let browserMarkers = [];
         let browserRecordStart = 0;
+        let eventsRetryTimer = null;
+        let eventsRetryAttempts = 0;
         const captureCanvasEl = document.getElementById('captureCanvas');
         const captureCtx = captureCanvasEl ? captureCanvasEl.getContext('2d') : null;
 
@@ -1474,9 +1476,44 @@ public class MjpegTelemetryServer : MonoBehaviour
             fetch(baseUrl + '/events.json?t=' + Date.now()).then(r => r.json()).then(j => {
                 const container = document.getElementById('eventButtons');
                 if (!container) return;
-                if (!j || !j.labels) { container.innerHTML = ''; return; }
-                container.innerHTML = j.labels.map(l => '<button class=""obs-button"" style=""font-size:12px;"" onclick=""onEventButtonClick(\'' + escapeHtml(l) + '\')"">' + escapeHtml(l) + '</button>').join('');
-            }).catch(() => { });
+                container.innerHTML = '';
+
+                if (!j || !j.labels || !Array.isArray(j.labels) || j.labels.length === 0) {
+                    const empty = document.createElement('span');
+                    empty.className = 'obs-status';
+                    empty.textContent = 'Sin eventos experimentales configurados.';
+                    container.appendChild(empty);
+                    scheduleEventsRetry();
+                    return;
+                }
+
+                if (eventsRetryTimer) {
+                    clearTimeout(eventsRetryTimer);
+                    eventsRetryTimer = null;
+                }
+                eventsRetryAttempts = 0;
+
+                j.labels.forEach(label => {
+                    const button = document.createElement('button');
+                    button.className = 'obs-button';
+                    button.style.fontSize = '12px';
+                    button.textContent = label;
+                    button.addEventListener('click', () => onEventButtonClick(label));
+                    container.appendChild(button);
+                });
+            }).catch(() => {
+                scheduleEventsRetry();
+            });
+        }
+
+        function scheduleEventsRetry() {
+            if (eventsRetryTimer != null) return;
+            if (eventsRetryAttempts >= 20) return;
+            eventsRetryAttempts++;
+            eventsRetryTimer = setTimeout(() => {
+                eventsRetryTimer = null;
+                fetchEventsConfig();
+            }, 1000);
         }
 
         function generateSrtFromBrowser() {
