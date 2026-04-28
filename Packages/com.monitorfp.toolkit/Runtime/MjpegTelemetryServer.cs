@@ -957,6 +957,7 @@ public class MjpegTelemetryServer : MonoBehaviour
                     <label style=""font-size:12px; margin-left:8px;""><input id=""nativeRecordToggle"" type=""checkbox""> Intentar grabación nativa Android</label>
                 </div>
                 <div id=""eventButtons"" style=""margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;""></div>
+                <div id=""downloadFallback"" class=""obs-status"" style=""margin-top:8px;""></div>
                 <canvas id=""captureCanvas"" width=""960"" height=""540"" style=""display:none;""></canvas>
                 <div class=""events-log"" id=""eventsList"">
                     <div class=""empty-log"">Esperando eventos...</div>
@@ -1389,6 +1390,7 @@ public class MjpegTelemetryServer : MonoBehaviour
         let recordedChunks = [];
         let browserMarkers = [];
         let browserRecordStart = 0;
+        let manualDownloads = new Map();
         let eventsRetryTimer = null;
         let eventsRetryAttempts = 0;
         const captureCanvasEl = document.getElementById('captureCanvas');
@@ -1597,13 +1599,50 @@ public class MjpegTelemetryServer : MonoBehaviour
 
         function downloadBlob(blob, filename) {
             const url = URL.createObjectURL(blob);
+            registerManualDownload(filename, url);
             const a = document.createElement('a');
-            a.href = url; a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 5000);
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { a.remove(); }, 1000);
         }
 
         function downloadBlobLater(blob, filename, delayMs) {
             setTimeout(() => downloadBlob(blob, filename), Math.max(0, delayMs || 0));
         }
+
+        function registerManualDownload(filename, url) {
+            const previous = manualDownloads.get(filename);
+            if (previous) {
+                try { URL.revokeObjectURL(previous); } catch (e) { }
+            }
+            manualDownloads.set(filename, url);
+            renderManualDownloads();
+        }
+
+        function renderManualDownloads() {
+            const container = document.getElementById('downloadFallback');
+            if (!container) return;
+
+            if (manualDownloads.size === 0) {
+                container.textContent = '';
+                return;
+            }
+
+            const links = Array.from(manualDownloads.entries()).map(([filename, url]) => {
+                return '<a href=""' + url + '"" download=""' + escapeHtml(filename) + '"">' + escapeHtml(filename) + '</a>';
+            }).join(' | ');
+
+            container.innerHTML = 'Si una descarga automática falla, descárgala aquí: ' + links;
+        }
+
+        window.addEventListener('beforeunload', () => {
+            manualDownloads.forEach((url) => {
+                try { URL.revokeObjectURL(url); } catch (e) { }
+            });
+            manualDownloads.clear();
+        });
 
         function escapeHtml(text) {
             return String(text)
