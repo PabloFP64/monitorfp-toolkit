@@ -1450,7 +1450,7 @@ public class MjpegTelemetryServer : MonoBehaviour
                     const srt = generateSrtFromServer(json);
                     const chapters = generateChaptersFromServer(json);
                     downloadBlob(new Blob([srt], { type: 'text/plain' }), 'markers_server.srt');
-                    downloadBlob(new Blob([chapters], { type: 'text/plain' }), 'markers_server.chapters.txt');
+                    downloadBlobLater(new Blob([chapters], { type: 'text/plain' }), 'markers_server.chapters.txt', 250);
                 }
             } catch (e) {
                 console.warn('No se pudo parar grabación (server)', e);
@@ -1468,7 +1468,7 @@ public class MjpegTelemetryServer : MonoBehaviour
                     const srt = generateSrtFromBrowser();
                     const chapters = generateChaptersFromBrowser();
                     downloadBlob(new Blob([srt], { type: 'text/plain' }), 'markers_browser.srt');
-                    downloadBlob(new Blob([chapters], { type: 'text/plain' }), 'markers_browser.chapters.txt');
+                    downloadBlobLater(new Blob([chapters], { type: 'text/plain' }), 'markers_browser.chapters.txt', 250);
                     resolve();
                 };
                 mediaRecorder.stop();
@@ -1598,7 +1598,11 @@ public class MjpegTelemetryServer : MonoBehaviour
         function downloadBlob(blob, filename) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url; a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
+            a.href = url; a.download = filename; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 5000);
+        }
+
+        function downloadBlobLater(blob, filename, delayMs) {
+            setTimeout(() => downloadBlob(blob, filename), Math.max(0, delayMs || 0));
         }
 
         function escapeHtml(text) {
