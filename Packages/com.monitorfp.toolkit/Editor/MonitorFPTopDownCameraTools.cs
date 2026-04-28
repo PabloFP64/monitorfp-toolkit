@@ -82,6 +82,8 @@ public static class MonitorFPTopDownCameraTools
         EnsureRuntimeComponentOnNamedObject("SessionRecorder", "SessionRecorder");
         EnsureRuntimeComponentOnNamedObject("UserTracker", "UserTracker");
         EnsureRuntimeComponentOnNamedObject("InteractionTracker", "ARInteractionEventTracker");
+        EnsureRuntimeComponentOnNamedObject("ObservationTracking", "ObservationTrackingSettings");
+        EnsureRuntimeComponentOnNamedObject("ObservationTracking", "ObservationTracker");
 
         GameObject sessionRecorderGO = GameObject.Find("SessionRecorder");
         if (sessionRecorderGO != null)
@@ -117,7 +119,7 @@ public static class MonitorFPTopDownCameraTools
             }
         }
 
-        Debug.Log("[MONITOR] Setup minimo creado: MonitorServer + SessionRecorder + UserTracker + InteractionTracker.");
+        Debug.Log("[MONITOR] Setup minimo creado: MonitorServer + SessionRecorder + UserTracker + InteractionTracker + ObservationTracking.");
     }
 
     private static Component EnsureRuntimeComponentOnNamedObject(string gameObjectName, string componentTypeName)

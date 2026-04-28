@@ -551,6 +551,24 @@ public class MjpegTelemetryServer : MonoBehaviour
                         return;
                     }
 
+                    if (path.StartsWith("/observation/start", StringComparison.OrdinalIgnoreCase))
+                    {
+                        HandleObservationTrackingCommand(stream, true);
+                        return;
+                    }
+
+                    if (path.StartsWith("/observation/stop", StringComparison.OrdinalIgnoreCase))
+                    {
+                        HandleObservationTrackingCommand(stream, false);
+                        return;
+                    }
+
+                    if (path.StartsWith("/observation/state", StringComparison.OrdinalIgnoreCase))
+                    {
+                        SendObservationState(stream);
+                        return;
+                    }
+
                     if (path == "/" || path.StartsWith("/index.html", StringComparison.OrdinalIgnoreCase))
                     {
                         SendHtml(stream);
@@ -722,6 +740,53 @@ public class MjpegTelemetryServer : MonoBehaviour
             border-radius: 4px;
             border: 1px solid #e0e0e0;
         }
+        .observation-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .obs-button {
+            border: none;
+            border-radius: 6px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .obs-button.start {
+            background: #d4edda;
+            color: #176e2d;
+        }
+        .obs-button.stop {
+            background: #f8d7da;
+            color: #8b1f2e;
+        }
+        .obs-status {
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+        }
+        .interesting-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        .interesting-table th,
+        .interesting-table td {
+            border-bottom: 1px solid #e5e5e5;
+            text-align: left;
+            padding: 6px 8px;
+        }
+        .interesting-table th {
+            color: #23425e;
+            font-weight: 700;
+            background: #f4f8fc;
+            position: sticky;
+            top: 0;
+        }
         .event-item {
             padding: 8px 12px;
             border-bottom: 1px solid #e0e0e0;
@@ -832,8 +897,31 @@ public class MjpegTelemetryServer : MonoBehaviour
         <div class=""grid-main"">
             <div class=""panel"">
                 <h2>Eventos de sesión</h2>
+                <div class=""observation-controls"">
+                    <button class=""obs-button start"" onclick=""startObservationTracking()"">Iniciar seguimiento observación</button>
+                    <button class=""obs-button stop"" onclick=""stopObservationTracking()"">Parar seguimiento observación</button>
+                    <span id=""obsStatus"" class=""obs-status"">Tracking: inactivo</span>
+                </div>
                 <div class=""events-log"" id=""eventsList"">
                     <div class=""empty-log"">Esperando eventos...</div>
+                </div>
+
+                <h2 style=""margin-top: 14px;"">Interesting Objects</h2>
+                <div class=""events-log"" style=""max-height: 260px;"">
+                    <table class=""interesting-table"">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Primera vez visto (s)</th>
+                                <th>Tiempo observado (s)</th>
+                                <th>Veces centro</th>
+                                <th>% tiempo centro</th>
+                            </tr>
+                        </thead>
+                        <tbody id=""interestingObjectsBody"">
+                            <tr><td colspan=""5"" style=""color:#999;"">Sin objetos interesantes detectados.</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -1152,6 +1240,9 @@ public class MjpegTelemetryServer : MonoBehaviour
                     updateEventsList(stats.events);
                 }
 
+                updateInterestingObjectsTable(stats.interestingObjects || []);
+                updateObservationControls(stats.observationTrackingActive, stats.observationTrackingStartMs);
+
                 setConnected(true);
             } catch (e) {
                 setConnected(false);
@@ -1190,6 +1281,65 @@ public class MjpegTelemetryServer : MonoBehaviour
                 const objectText = e.objectName && e.objectName.length > 0 ? (' [obj: ' + e.objectName + ']') : '';
                 return '<div class=""event-item""><span class=""event-time"">' + time + '</span><span class=""event-type"">' + e.eventType + '</span><span class=""event-desc"">' + e.description + objectText + '</span></div>';
             }).join('');
+        }
+
+        function updateInterestingObjectsTable(items) {
+            const body = document.getElementById('interestingObjectsBody');
+            if (!items || items.length === 0) {
+                body.innerHTML = '<tr><td colspan=""5"" style=""color:#999;"">Sin objetos interesantes detectados.</td></tr>';
+                return;
+            }
+
+            body.innerHTML = items.map(item => {
+                const firstSeen = item.firstSeenAtSeconds >= 0 ? item.firstSeenAtSeconds.toFixed(2) : '-';
+                const observed = Number.isFinite(item.totalObservedSeconds) ? item.totalObservedSeconds.toFixed(2) : '0.00';
+                const centerCount = Number.isFinite(item.centerObservationCount) ? item.centerObservationCount : 0;
+                const centerPercent = Number.isFinite(item.centerTimePercent) ? item.centerTimePercent.toFixed(1) + '%' : '0.0%';
+                return '<tr>' +
+                    '<td>' + escapeHtml(item.name || 'unknown') + '</td>' +
+                    '<td>' + firstSeen + '</td>' +
+                    '<td>' + observed + '</td>' +
+                    '<td>' + centerCount + '</td>' +
+                    '<td>' + centerPercent + '</td>' +
+                    '</tr>';
+            }).join('');
+        }
+
+        function updateObservationControls(isActive, startMs) {
+            const status = document.getElementById('obsStatus');
+            if (!status) return;
+
+            if (isActive) {
+                const since = startMs ? (' | startMs=' + startMs) : '';
+                status.textContent = 'Tracking: ACTIVO' + since;
+            } else {
+                status.textContent = 'Tracking: inactivo';
+            }
+        }
+
+        async function startObservationTracking() {
+            try {
+                await fetch(baseUrl + '/observation/start?t=' + Date.now());
+            } catch (e) {
+                console.warn('No se pudo iniciar tracking de observación', e);
+            }
+        }
+
+        async function stopObservationTracking() {
+            try {
+                await fetch(baseUrl + '/observation/stop?t=' + Date.now());
+            } catch (e) {
+                console.warn('No se pudo parar tracking de observación', e);
+            }
+        }
+
+        function escapeHtml(text) {
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/""/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         function setConnected(connected) {
@@ -1251,7 +1401,7 @@ public class MjpegTelemetryServer : MonoBehaviour
 
     private void SendInfo(NetworkStream stream)
     {
-        const string body = "MonitorFP Toolkit server running. Endpoints: /, /frame.jpg, /stream.mjpg, /state.json, /stats.json, /metrics.json, /map-config.json, /map.png";
+        const string body = "MonitorFP Toolkit server running. Endpoints: /, /frame.jpg, /stream.mjpg, /state.json, /stats.json, /metrics.json, /map-config.json, /map.png, /observation/start, /observation/stop, /observation/state";
         byte[] bodyBytes = Encoding.UTF8.GetBytes(body);
 
         string headers =
@@ -1463,6 +1613,66 @@ public class MjpegTelemetryServer : MonoBehaviour
 
         WriteAscii(stream, headers);
         stream.Write(body, 0, body.Length);
+    }
+
+    [Serializable]
+    private struct ObservationStatePayload
+    {
+        public bool active;
+        public long trackingStartMs;
+        public int interestingObjectCount;
+    }
+
+    private void HandleObservationTrackingCommand(NetworkStream stream, bool start)
+    {
+        ObservationTracker tracker = ObservationTracker.GetInstance();
+        if (tracker == null)
+        {
+            SendServiceUnavailable(stream, "ObservationTracker not found in scene");
+            return;
+        }
+
+        if (start)
+        {
+            tracker.StartObservationTracking();
+        }
+        else
+        {
+            tracker.StopObservationTracking();
+        }
+
+        SendObservationState(stream);
+    }
+
+    private void SendObservationState(NetworkStream stream)
+    {
+        ObservationTracker tracker = ObservationTracker.GetInstance();
+        if (tracker == null)
+        {
+            SendServiceUnavailable(stream, "ObservationTracker not found in scene");
+            return;
+        }
+
+        tracker.GetObservationSnapshot(out InterestingObjectObservationStats[] stats, out bool active, out long startMs);
+        ObservationStatePayload payload = new ObservationStatePayload
+        {
+            active = active,
+            trackingStartMs = startMs,
+            interestingObjectCount = stats != null ? stats.Length : 0
+        };
+
+        string json = JsonUtility.ToJson(payload);
+        byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
+
+        string headers =
+            "HTTP/1.1 200 OK\r\n" +
+            "Content-Type: application/json; charset=utf-8\r\n" +
+            "Cache-Control: no-store\r\n" +
+            $"Content-Length: {jsonBytes.Length}\r\n" +
+            "Connection: close\r\n\r\n";
+
+        WriteAscii(stream, headers);
+        stream.Write(jsonBytes, 0, jsonBytes.Length);
     }
 
     private byte[] GetLatestFrame()

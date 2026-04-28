@@ -126,7 +126,34 @@ if (recorder != null)
 }
 ```
 
-## 7) Endpoints HTTP
+## 7) Seguimiento de InterestingGameObject
+
+Para medir que objetos observa el usuario:
+
+1. Anade el componente `InterestingGameObject` a cada objeto relevante.
+2. Crea un GO `ObservationTracking` con:
+  - `ObservationTrackingSettings`
+  - `ObservationTracker`
+3. En `ObservationTrackingSettings` configura:
+  - `centerRegionFraction`: tamano de la region central de vision
+  - `useLineOfSight`: valida linea de vision
+  - `startMode`: auto al iniciar escena o manual desde web
+
+Tambien puedes crear esto automaticamente desde:
+
+`MonitorFP > Crear Setup Minimo en Escena`
+
+En el dashboard web:
+
+- Boton `Iniciar seguimiento observacion`
+- Boton `Parar seguimiento observacion`
+- Tabla `Interesting Objects` con:
+  - primera vez visto (segundos desde inicio tracking)
+  - tiempo total observado
+  - veces detectado en zona central
+  - porcentaje de tiempo en zona central
+
+## 8) Endpoints HTTP
 
 - `/` dashboard web
 - `/frame.jpg` ultimo frame
@@ -136,6 +163,9 @@ if (recorder != null)
 - `/metrics.json` metricas de rendimiento
 - `/map-config.json` configuracion y diagnostico de mapa
 - `/map.png` imagen del mapa
+- `/observation/start` inicia tracking manual
+- `/observation/stop` para tracking manual
+- `/observation/state` estado actual del tracking
 
 Campos utiles en `/map-config.json`:
 
@@ -144,7 +174,7 @@ Campos utiles en `/map-config.json`:
 - `mapSource` (`texture`, `camera`, `grid`, `none`)
 - `mapMessage`
 
-## 8) Uso en red
+## 9) Uso en red
 
 - En el mismo PC: `http://localhost:8080`
 - En LAN: `http://<IP_PC_UNITY>:8080`
@@ -152,7 +182,7 @@ Campos utiles en `/map-config.json`:
 
 
 
-## 9) Checklist de validacion rapida
+## 10) Checklist de validacion rapida
 
 1. `http://localhost:8080` abre
 2. `/frame.jpg` devuelve imagen
@@ -160,7 +190,7 @@ Campos utiles en `/map-config.json`:
 4. `/stats.json` crece en `positionHistory`
 5. `/map-config.json` muestra `hasMap=true` o fallback `grid`
 
-## 10) Troubleshooting
+## 11) Troubleshooting
 
 - Web abre pero no actualiza:
   - revisar puerto, firewall y URL

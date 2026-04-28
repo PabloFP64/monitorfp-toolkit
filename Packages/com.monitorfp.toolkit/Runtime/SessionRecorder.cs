@@ -35,6 +35,9 @@ public struct SessionStats
     public float maxDistance;
     public PositionSample[] positionHistory;
     public SessionEvent[] events;
+    public InterestingObjectObservationStats[] interestingObjects;
+    public bool observationTrackingActive;
+    public long observationTrackingStartMs;
     public int sampleCount;
 }
 
@@ -188,6 +191,15 @@ public class SessionRecorder : MonoBehaviour
         long now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         long elapsedMs = now - sessionStartMs;
         float avgSpeed = elapsedMs > 0 ? distanceTraveled / (elapsedMs / 1000f) : 0f;
+        InterestingObjectObservationStats[] interestingStats = Array.Empty<InterestingObjectObservationStats>();
+        bool observationTrackingActive = false;
+        long observationTrackingStartMs = 0;
+
+        ObservationTracker tracker = ObservationTracker.GetInstance();
+        if (tracker != null)
+        {
+            tracker.GetObservationSnapshot(out interestingStats, out observationTrackingActive, out observationTrackingStartMs);
+        }
 
         lock (historyLock)
         {
@@ -201,6 +213,9 @@ public class SessionRecorder : MonoBehaviour
                 maxDistance = maxDistance,
                 positionHistory = positionHistory.ToArray(),
                 events = events.ToArray(),
+                interestingObjects = interestingStats,
+                observationTrackingActive = observationTrackingActive,
+                observationTrackingStartMs = observationTrackingStartMs,
                 sampleCount = positionHistory.Count
             };
         }
