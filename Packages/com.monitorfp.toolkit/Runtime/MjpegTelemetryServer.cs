@@ -67,6 +67,12 @@ public class MjpegTelemetryServer : MonoBehaviour
         public string mapMessage;
     }
 
+    [Serializable]
+    private struct EventLabelsPayload
+    {
+        public string[] labels;
+    }
+
     private int GetNormalizedMapRotationDegrees()
     {
         int normalized = ((mapRotationDegrees % 360) + 360) % 360;
@@ -1659,7 +1665,10 @@ public class MjpegTelemetryServer : MonoBehaviour
     {
         string[] labels = ExperimentalEventConfig.GetCachedLabelsSnapshot();
 
-        var payload = new { labels = labels };
+        EventLabelsPayload payload = new EventLabelsPayload
+        {
+            labels = labels
+        };
         string json = JsonUtility.ToJson(payload);
         byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
 
