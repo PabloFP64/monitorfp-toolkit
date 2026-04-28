@@ -1448,7 +1448,9 @@ public class MjpegTelemetryServer : MonoBehaviour
                 if (resp.ok) {
                     const json = await resp.json();
                     const srt = generateSrtFromServer(json);
+                    const chapters = generateChaptersFromServer(json);
                     downloadBlob(new Blob([srt], { type: 'text/plain' }), 'markers_server.srt');
+                    downloadBlob(new Blob([chapters], { type: 'text/plain' }), 'markers_server.chapters.txt');
                 }
             } catch (e) {
                 console.warn('No se pudo parar grabación (server)', e);
@@ -1464,7 +1466,9 @@ public class MjpegTelemetryServer : MonoBehaviour
                     const blob = new Blob(recordedChunks, { type: 'video/webm' });
                     downloadBlob(blob, 'recording_browser.webm');
                     const srt = generateSrtFromBrowser();
+                    const chapters = generateChaptersFromBrowser();
                     downloadBlob(new Blob([srt], { type: 'text/plain' }), 'markers_browser.srt');
+                    downloadBlob(new Blob([chapters], { type: 'text/plain' }), 'markers_browser.chapters.txt');
                     resolve();
                 };
                 mediaRecorder.stop();
@@ -1527,7 +1531,7 @@ public class MjpegTelemetryServer : MonoBehaviour
             for (let i = 0; i < browserMarkers.length; i++) {
                 const idx = i + 1;
                 const startMs = browserMarkers[i].ms;
-                const endMs = startMs + 1000;
+                const endMs = startMs + 2000;
                 out += idx + '\n' + formatSrtTime(startMs) + ' --> ' + formatSrtTime(endMs) + '\n' + browserMarkers[i].label + '\n\n';
             }
             return out;
@@ -1539,10 +1543,47 @@ public class MjpegTelemetryServer : MonoBehaviour
             for (let i = 0; i < json.markers.length; i++) {
                 const idx = i + 1;
                 const startMs = json.markers[i].ms;
-                const endMs = startMs + 1000;
+                const endMs = startMs + 2000;
                 out += idx + '\n' + formatSrtTime(startMs) + ' --> ' + formatSrtTime(endMs) + '\n' + json.markers[i].label + '\n\n';
             }
             return out;
+        }
+
+        function generateChaptersFromBrowser() {
+            return generateChapterText(browserMarkers);
+        }
+
+        function generateChaptersFromServer(json) {
+            if (!json || !json.markers) return '';
+            return generateChapterText(json.markers);
+        }
+
+        function generateChapterText(markers) {
+            if (!markers || markers.length === 0) return '';
+
+            let out = '';
+            for (let i = 0; i < markers.length; i++) {
+                const index = String(i + 1).padStart(2, '0');
+                out += 'CHAPTER' + index + '=' + formatChapterTime(markers[i].ms) + '\n';
+                out += 'CHAPTER' + index + 'NAME=' + escapeChapterText(markers[i].label) + '\n';
+            }
+            return out;
+        }
+
+        function formatChapterTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            const millis = Math.floor(ms % 1000);
+            return String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0') + '.' + String(millis).padStart(3, '0');
+        }
+
+        function escapeChapterText(text) {
+            return String(text)
+                .replace(/\r/g, ' ')
+                .replace(/\n/g, ' ')
+                .replace(/=/g, '-');
         }
 
         function formatSrtTime(ms) {
