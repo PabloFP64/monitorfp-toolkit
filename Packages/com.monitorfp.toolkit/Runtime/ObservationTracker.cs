@@ -225,10 +225,10 @@ public class ObservationTracker : MonoBehaviour
             if (found != null)
             {
                 targetCamera = found;
-                if (settings != null && settings.ObservationCamera == null)
-                {
-                    settings.ObservationCamera = found;
-                }
+                    if (settings != null && settings.ObservationCamera == null)
+                    {
+                        settings.SetObservationCamera(found);
+                    }
             }
         }
     }

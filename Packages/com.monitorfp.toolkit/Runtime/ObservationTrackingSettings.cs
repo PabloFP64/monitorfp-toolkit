@@ -26,4 +26,9 @@ public class ObservationTrackingSettings : MonoBehaviour
     public bool RequireLineOfSight => requireLineOfSight;
     public float MaxObservationDistance => Mathf.Max(0.5f, maxObservationDistance);
     public float RediscoveryInterval => Mathf.Max(0.1f, rediscoveryInterval);
+
+    public void SetObservationCamera(Camera cam)
+    {
+        observationCamera = cam;
+    }
 }
