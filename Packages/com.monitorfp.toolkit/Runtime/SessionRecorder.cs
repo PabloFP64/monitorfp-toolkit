@@ -19,8 +19,7 @@ public struct PositionSample
 public struct SessionEvent
 {
     public long timestampMs;
-    public string eventType;  // "interaction", "movement_start", "movement_stop", etc.
-    public string description;
+    public string eventType;     public string description;
     public string objectName;
 }
 

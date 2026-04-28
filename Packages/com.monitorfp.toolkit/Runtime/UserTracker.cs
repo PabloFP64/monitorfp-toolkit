@@ -15,7 +15,7 @@ public struct TelemetrySnapshot
 public class UserTracker : MonoBehaviour
 {
     [Header("Configuración")]
-    public float interval = 1.0f; // Cada cuanto tiempo guardamos datos (1 segundo)
+    public float interval = 1.0f; 
     [SerializeField] private bool logPositionToConsole = false;
     
     private float timer = 0f;

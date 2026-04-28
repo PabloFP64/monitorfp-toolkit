@@ -113,7 +113,6 @@ public static class MonitorFPEditorTools
                     EditorUtility.SetDirty(server);
                 }
 
-                // Also assign ObservationTrackingSettings.observationCamera if present
                 if (obsSettings != null)
                 {
                     Undo.RecordObject(obsSettings, "Assign observation camera");
@@ -133,7 +132,6 @@ public static class MonitorFPEditorTools
             }
         }
 
-        // Create ExperimentalEventConfig with default events
         Component eventConfig = EnsureRuntimeComponentOnNamedObject("ExperimentalEvents", "ExperimentalEventConfig");
         if (eventConfig != null)
         {

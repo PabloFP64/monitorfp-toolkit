@@ -43,7 +43,9 @@ public class MjpegTelemetryServer : MonoBehaviour
     private Texture2D readbackTexture;
 
     private readonly object frameLock = new object();
+    private readonly object telemetryFallbackLock = new object();
     private byte[] latestFrameJpg = Array.Empty<byte>();
+    private TelemetrySnapshot telemetryFallbackSnapshot;
     private byte[] mapPngBytes = Array.Empty<byte>();
     private string currentMapSource = "none";
     private string currentMapMessage = "No map loaded";
@@ -410,6 +412,27 @@ public class MjpegTelemetryServer : MonoBehaviour
         lock (frameLock)
         {
             latestFrameJpg = jpg;
+        }
+
+        if (sourceCamera != null)
+        {
+            Vector3 pos = sourceCamera.transform.position;
+            Vector3 rot = sourceCamera.transform.eulerAngles;
+            TelemetrySnapshot fallback = new TelemetrySnapshot
+            {
+                x = pos.x,
+                y = pos.y,
+                z = pos.z,
+                rotX = rot.x,
+                rotY = rot.y,
+                rotZ = rot.z,
+                unixTimeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            };
+
+            lock (telemetryFallbackLock)
+            {
+                telemetryFallbackSnapshot = fallback;
+            }
         }
 
         long captureLatencyMs = (long)Mathf.Max(0f, (Time.realtimeSinceStartup * 1000f) - startMs);
@@ -1597,8 +1620,7 @@ public class MjpegTelemetryServer : MonoBehaviour
 
     private void SendEventsConfig(NetworkStream stream)
     {
-        ExperimentalEventConfig cfg = UnityEngine.Object.FindObjectOfType<ExperimentalEventConfig>();
-        string[] labels = cfg != null && cfg.eventLabels != null ? cfg.eventLabels.ToArray() : new string[0];
+        string[] labels = ExperimentalEventConfig.GetCachedLabelsSnapshot();
 
         var payload = new { labels = labels };
         string json = JsonUtility.ToJson(payload);
@@ -1618,20 +1640,12 @@ public class MjpegTelemetryServer : MonoBehaviour
     private void SendState(NetworkStream stream)
     {
         TelemetrySnapshot snapshot;
-        if (!UserTracker.TryGetLatestSnapshot(out snapshot) && sourceCamera != null)
+        if (!UserTracker.TryGetLatestSnapshot(out snapshot))
         {
-            Vector3 pos = sourceCamera.transform.position;
-            Vector3 rot = sourceCamera.transform.eulerAngles;
-            snapshot = new TelemetrySnapshot
+            lock (telemetryFallbackLock)
             {
-                x = pos.x,
-                y = pos.y,
-                z = pos.z,
-                rotX = rot.x,
-                rotY = rot.y,
-                rotZ = rot.z,
-                unixTimeMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-            };
+                snapshot = telemetryFallbackSnapshot;
+            }
         }
 
         string json = JsonUtility.ToJson(snapshot);
@@ -1903,7 +1917,6 @@ public class MjpegTelemetryServer : MonoBehaviour
 
     private void HandleRecordingMarker(NetworkStream stream, string path)
     {
-        // read marker label from query ?label=...
         string label = "marker";
         try
         {
