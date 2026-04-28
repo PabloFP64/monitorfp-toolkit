@@ -305,6 +305,12 @@ public class ObservationTracker : MonoBehaviour
         InterestingGameObject[] found = FindObjectsByType<InterestingGameObject>(FindObjectsSortMode.None);
         HashSet<InterestingGameObject> alive = new HashSet<InterestingGameObject>();
 
+        int foundCount = found != null ? found.Length : 0;
+        if (logObservationEventsToConsole)
+        {
+            Debug.Log($"[MONITOR][OBS] RediscoverInterestingObjects called. Found count={foundCount}");
+        }
+
         if (found != null)
         {
             for (int i = 0; i < found.Length; i++)
@@ -319,8 +325,17 @@ public class ObservationTracker : MonoBehaviour
                 if (!tracked.ContainsKey(marker))
                 {
                     tracked[marker] = new ObservationState { marker = marker };
+                    if (logObservationEventsToConsole)
+                    {
+                        Debug.Log($"[MONITOR][OBS] Rediscovered and added: {marker.DisplayName} (obj={marker.gameObject.name})");
+                    }
                 }
             }
+        }
+
+        if (logObservationEventsToConsole)
+        {
+            Debug.Log($"[MONITOR][OBS] After rediscover: tracked={tracked.Count} alive={alive.Count}");
         }
 
         if (tracked.Count > alive.Count)
