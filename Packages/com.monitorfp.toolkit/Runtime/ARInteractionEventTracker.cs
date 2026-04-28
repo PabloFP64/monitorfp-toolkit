@@ -133,7 +133,6 @@ public class ARInteractionEventTracker : MonoBehaviour
             }
         }
 
-        // Limpieza de referencias que ya no están presentes.
         if (trackedStates.Count > trackedTransforms.Count)
         {
             HashSet<Transform> current = new HashSet<Transform>(trackedTransforms);

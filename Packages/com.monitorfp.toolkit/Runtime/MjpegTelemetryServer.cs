@@ -450,7 +450,6 @@ public class MjpegTelemetryServer : MonoBehaviour
         }
         catch
         {
-            // Ignorado intencionalmente: se cierra en destruccion.
         }
 
         try
@@ -462,7 +461,6 @@ public class MjpegTelemetryServer : MonoBehaviour
         }
         catch
         {
-            // Ignorado intencionalmente: cierre defensivo.
         }
     }
 
@@ -586,7 +584,6 @@ public class MjpegTelemetryServer : MonoBehaviour
                     }
                     catch
                     {
-                        // Si el stream ya no está disponible, no hay nada más que hacer.
                     }
                 }
             }
@@ -983,7 +980,6 @@ public class MjpegTelemetryServer : MonoBehaviour
         }
 
         function createChart() {
-            // Iniciar gráfica 3D vacía
             const trace = {
                 x: [],
                 y: [],
@@ -1219,13 +1215,11 @@ public class MjpegTelemetryServer : MonoBehaviour
                 const stats = await resp.json();
                 lastStats = stats;
 
-                // Actualizar formulario
                 document.getElementById('duration').textContent = formatSeconds(stats.elapsedSeconds);
                 document.getElementById('distance').textContent = stats.distanceTraveled.toFixed(2);
                 document.getElementById('speed').textContent = stats.currentSpeed.toFixed(2);
                 document.getElementById('avgSpeed').textContent = stats.averageSpeed.toFixed(2);
 
-                // Actualizar gráfica 3D
                 if (stats.positionHistory && stats.positionHistory.length > 0) {
                     const xs = stats.positionHistory.map(s => s.x);
                     const ys = stats.positionHistory.map(s => s.y);
@@ -1235,7 +1229,6 @@ public class MjpegTelemetryServer : MonoBehaviour
 
                 drawMapPath(stats.positionHistory || []);
 
-                // Actualizar eventos
                 if (stats.events && stats.events.length > 0) {
                     updateEventsList(stats.events);
                 }
@@ -1273,7 +1266,6 @@ public class MjpegTelemetryServer : MonoBehaviour
                 return;
             }
             
-            // Mostrar últimos 10 eventos
             const recent = events.slice(-10);
             list.innerHTML = recent.map(e => {
                 const dt = new Date(e.timestampMs);
@@ -1365,7 +1357,6 @@ public class MjpegTelemetryServer : MonoBehaviour
             return padZero(hrs) + ':' + padZero(mins) + ':' + padZero(secs);
         }
 
-        // Inicializar
         mapCanvas = document.getElementById('mapCanvas');
         mapCtx = mapCanvas.getContext('2d');
         resizeMapCanvas();

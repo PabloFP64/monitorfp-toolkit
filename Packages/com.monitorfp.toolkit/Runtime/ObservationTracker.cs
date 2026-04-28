@@ -104,6 +104,26 @@ public class ObservationTracker : MonoBehaviour
 
     private void Start()
     {
+        if (settings == null)
+        {
+            settings = GetComponent<ObservationTrackingSettings>();
+        }
+
+        if (settings != null && settings.ObservationCamera == null)
+        {
+            Camera main = Camera.main;
+            if (main == null)
+            {
+                main = FindFirstObjectByType<Camera>();
+            }
+
+            if (main != null)
+            {
+                settings.SetObservationCamera(main);
+                targetCamera = main;
+            }
+        }
+
         RediscoverInterestingObjects();
 
         if (settings != null && settings.StartMode == ObservationTrackingStartMode.OnSceneStart)
@@ -308,7 +328,7 @@ public class ObservationTracker : MonoBehaviour
         int foundCount = found != null ? found.Length : 0;
         if (logObservationEventsToConsole)
         {
-            Debug.Log($"[MONITOR][OBS] RediscoverInterestingObjects called. Found count={foundCount}");
+            Debug.Log($"[MONITOR][OBS] Rediscover called. Found count={foundCount}");
         }
 
         if (found != null)
@@ -325,10 +345,6 @@ public class ObservationTracker : MonoBehaviour
                 if (!tracked.ContainsKey(marker))
                 {
                     tracked[marker] = new ObservationState { marker = marker };
-                    if (logObservationEventsToConsole)
-                    {
-                        Debug.Log($"[MONITOR][OBS] Rediscovered and added: {marker.DisplayName} (obj={marker.gameObject.name})");
-                    }
                 }
             }
         }
@@ -363,11 +379,6 @@ public class ObservationTracker : MonoBehaviour
             snapshotBuffer.Clear();
             float elapsed = trackingStartMs > 0 ? Mathf.Max(0f, (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - trackingStartMs) / 1000f) : 0f;
 
-            if (logObservationEventsToConsole)
-            {
-                Debug.Log($"[MONITOR][OBS] RebuildSnapshot called. Tracked count={tracked.Count}");
-            }
-
             foreach (KeyValuePair<InterestingGameObject, ObservationState> kv in tracked)
             {
                 InterestingGameObject marker = kv.Key;
@@ -375,11 +386,6 @@ public class ObservationTracker : MonoBehaviour
                 if (marker == null || state == null)
                 {
                     continue;
-                }
-
-                if (logObservationEventsToConsole)
-                {
-                    Debug.Log($"[MONITOR][OBS] Snapshot include: {marker.DisplayName} firstSeen={state.firstSeenAtSeconds} total={state.totalObservedSeconds}");
                 }
 
                 float[] segments = BuildSegments(state, elapsed);

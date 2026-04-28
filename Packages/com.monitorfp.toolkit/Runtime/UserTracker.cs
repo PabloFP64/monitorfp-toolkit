@@ -25,7 +25,6 @@ public class UserTracker : MonoBehaviour
 
     void Start()
     {
-        // Buscamos main Camera (VR/AR)
         Camera mainCamera = Camera.main;
         if (mainCamera == null)
         {
@@ -76,7 +75,6 @@ public class UserTracker : MonoBehaviour
             latestSnapshot = snapshot;
         }
 
-        // Registrar en SessionRecorder si está disponible
         SessionRecorder recorder = SessionRecorder.GetInstance();
         if (recorder != null)
         {
@@ -98,13 +96,11 @@ public class UserTracker : MonoBehaviour
     {
         if (TryGetLatestSnapshot(out TelemetrySnapshot snapshot))
         {
-            // Por ahora, solo lo mostramos en la consola de Unity si está habilitado
             if (logPositionToConsole)
             {
                 Debug.Log($"[MONITOR] Pos: ({snapshot.x:F3}, {snapshot.y:F3}, {snapshot.z:F3}) | Rot: ({snapshot.rotX:F2}, {snapshot.rotY:F2}, {snapshot.rotZ:F2})");
             }
             
-            // TODO: anadiremos el envio a la WEB o a la Base de Datos
         }
     }
 }

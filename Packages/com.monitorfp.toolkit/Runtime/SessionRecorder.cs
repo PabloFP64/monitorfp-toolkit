@@ -130,7 +130,6 @@ public class SessionRecorder : MonoBehaviour
 
     public void RecordPositionSample(Vector3 position)
     {
-        // Calcular velocidad y distancia
         float distance = Vector3.Distance(lastPosition, position);
         float deltaTime = Time.deltaTime;
         currentSpeed = deltaTime > 0 ? distance / deltaTime : 0f;
@@ -149,7 +148,6 @@ public class SessionRecorder : MonoBehaviour
         {
             positionHistory.Add(sample);
             int maxSamples = Mathf.Max(1000, maxPositionSamples);
-            // Mantener solo los últimos samples configurados para controlar memoria.
             while (positionHistory.Count > maxSamples)
             {
                 positionHistory.RemoveAt(0);
@@ -178,7 +176,6 @@ public class SessionRecorder : MonoBehaviour
         {
             events.Add(evt);
             int maxEvt = Mathf.Max(100, maxEvents);
-            // Mantener últimos eventos configurados.
             while (events.Count > maxEvt)
             {
                 events.RemoveAt(0);
