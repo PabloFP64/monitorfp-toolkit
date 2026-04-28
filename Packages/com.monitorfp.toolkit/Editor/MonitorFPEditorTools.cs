@@ -133,7 +133,25 @@ public static class MonitorFPEditorTools
             }
         }
 
-        Debug.Log("[MONITOR] Setup minimo creado: MonitorServer + SessionRecorder + UserTracker + InteractionTracker + ObservationTracking.");
+        // Create ExperimentalEventConfig with default events
+        Component eventConfig = EnsureRuntimeComponentOnNamedObject("ExperimentalEvents", "ExperimentalEventConfig");
+        if (eventConfig != null)
+        {
+            Undo.RecordObject(eventConfig, "Setup experimental events");
+            SerializedObject soEvents = new SerializedObject(eventConfig);
+            SerializedProperty labelsProp = soEvents.FindProperty("eventLabels");
+            if (labelsProp != null)
+            {
+                labelsProp.arraySize = 3;
+                labelsProp.GetArrayElementAtIndex(0).stringValue = "Inicio del experimento";
+                labelsProp.GetArrayElementAtIndex(1).stringValue = "Evento importante";
+                labelsProp.GetArrayElementAtIndex(2).stringValue = "Fin del experimento";
+                soEvents.ApplyModifiedProperties();
+                EditorUtility.SetDirty(eventConfig);
+            }
+        }
+
+        Debug.Log("[MONITOR] Setup minimo creado: MonitorServer + SessionRecorder + UserTracker + InteractionTracker + ObservationTracking + ExperimentalEvents.");
     }
 
     private static Component EnsureRuntimeComponentOnNamedObject(string gameObjectName, string componentTypeName)
