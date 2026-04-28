@@ -13,8 +13,8 @@ public class MjpegTelemetryServer : MonoBehaviour
 
     [Header("Captura")]
     [SerializeField] private Camera sourceCamera;
-    [SerializeField] private int frameWidth = 960;
-    [SerializeField] private int frameHeight = 540;
+    [SerializeField] private int frameWidth = 1920;
+    [SerializeField] private int frameHeight = 1080;
     [SerializeField] private int fps = 30;
     [Range(1, 100)]
     [SerializeField] private int jpgQuality = 65;
@@ -958,7 +958,7 @@ public class MjpegTelemetryServer : MonoBehaviour
                 </div>
                 <div id=""eventButtons"" style=""margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;""></div>
                 <div id=""downloadFallback"" class=""obs-status"" style=""margin-top:8px;""></div>
-                <canvas id=""captureCanvas"" width=""960"" height=""540"" style=""display:none;""></canvas>
+                <canvas id=""captureCanvas"" width=""1920"" height=""1080"" style=""display:none;""></canvas>
                 <div class=""events-log"" id=""eventsList"">
                     <div class=""empty-log"">Esperando eventos...</div>
                 </div>
@@ -1421,8 +1421,8 @@ public class MjpegTelemetryServer : MonoBehaviour
             browserMarkers = [];
             browserRecordStart = Date.now();
 
-            captureCanvasEl.width = img.naturalWidth || 960;
-            captureCanvasEl.height = img.naturalHeight || 540;
+            captureCanvasEl.width = img.naturalWidth || 1920;
+            captureCanvasEl.height = img.naturalHeight || 1080;
 
             const stream = captureCanvasEl.captureStream(30);
             try {
