@@ -19,6 +19,7 @@ public class ObservationTracker : MonoBehaviour
     }
 
     private static ObservationTracker instance;
+    private static readonly List<InterestingGameObject> pendingRegistrations = new List<InterestingGameObject>();
 
     [SerializeField] private ObservationTrackingSettings settings;
     [SerializeField] private bool logObservationEventsToConsole = false;
@@ -39,8 +40,17 @@ public class ObservationTracker : MonoBehaviour
 
     public static void RegisterInterestingObject(InterestingGameObject marker)
     {
-        if (marker == null || instance == null)
+        if (marker == null)
         {
+            return;
+        }
+
+        if (instance == null)
+        {
+            if (!pendingRegistrations.Contains(marker))
+            {
+                pendingRegistrations.Add(marker);
+            }
             return;
         }
 
@@ -49,8 +59,17 @@ public class ObservationTracker : MonoBehaviour
 
     public static void UnregisterInterestingObject(InterestingGameObject marker)
     {
-        if (marker == null || instance == null)
+        if (marker == null)
         {
+            return;
+        }
+
+        if (instance == null)
+        {
+            if (pendingRegistrations.Contains(marker))
+            {
+                pendingRegistrations.Remove(marker);
+            }
             return;
         }
 
@@ -68,6 +87,19 @@ public class ObservationTracker : MonoBehaviour
         instance = this;
         settings = settings != null ? settings : GetComponent<ObservationTrackingSettings>();
         ResolveCamera();
+
+        if (pendingRegistrations.Count > 0)
+        {
+            foreach (InterestingGameObject pending in pendingRegistrations.ToArray())
+            {
+                if (pending != null)
+                {
+                    RegisterInternal(pending);
+                }
+            }
+
+            pendingRegistrations.Clear();
+        }
     }
 
     private void Start()
@@ -184,10 +216,19 @@ public class ObservationTracker : MonoBehaviour
 
         if (targetCamera == null)
         {
-            targetCamera = Camera.main;
-            if (targetCamera == null)
+            Camera found = Camera.main;
+            if (found == null)
             {
-                targetCamera = FindFirstObjectByType<Camera>();
+                found = FindFirstObjectByType<Camera>();
+            }
+
+            if (found != null)
+            {
+                targetCamera = found;
+                if (settings != null && settings.ObservationCamera == null)
+                {
+                    settings.ObservationCamera = found;
+                }
             }
         }
     }

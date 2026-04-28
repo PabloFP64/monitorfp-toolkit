@@ -16,6 +16,7 @@ public class UserTracker : MonoBehaviour
 {
     [Header("Configuración")]
     public float interval = 1.0f; // Cada cuanto tiempo guardamos datos (1 segundo)
+    [SerializeField] private bool logPositionToConsole = false;
     
     private float timer = 0f;
     private Transform userCamera;
@@ -26,6 +27,10 @@ public class UserTracker : MonoBehaviour
     {
         // Buscamos main Camera (VR/AR)
         Camera mainCamera = Camera.main;
+        if (mainCamera == null)
+        {
+            mainCamera = FindFirstObjectByType<Camera>();
+        }
         userCamera = mainCamera != null ? mainCamera.transform : null;
         
         if (userCamera == null)
@@ -93,8 +98,11 @@ public class UserTracker : MonoBehaviour
     {
         if (TryGetLatestSnapshot(out TelemetrySnapshot snapshot))
         {
-            // Por ahora, solo lo mostramos en la consola de Unity
-            Debug.Log($"[MONITOR] Pos: ({snapshot.x:F3}, {snapshot.y:F3}, {snapshot.z:F3}) | Rot: ({snapshot.rotX:F2}, {snapshot.rotY:F2}, {snapshot.rotZ:F2})");
+            // Por ahora, solo lo mostramos en la consola de Unity si está habilitado
+            if (logPositionToConsole)
+            {
+                Debug.Log($"[MONITOR] Pos: ({snapshot.x:F3}, {snapshot.y:F3}, {snapshot.z:F3}) | Rot: ({snapshot.rotX:F2}, {snapshot.rotY:F2}, {snapshot.rotZ:F2})");
+            }
             
             // TODO: anadiremos el envio a la WEB o a la Base de Datos
         }

@@ -116,6 +116,7 @@ Si quieres hover XR tambien:
 
 - activa `logXRHoverEvents` en `SessionRecorder`
 - para trazas AR por consola, activa `logInteractionsToConsole` en `ARInteractionEventTracker` (por defecto viene en `false`)
+ - para ver la posición en consola, activa `logPositionToConsole` en `UserTracker` (por defecto viene en `false`)
 
 Ejemplo de evento personalizado:
 
@@ -157,6 +158,7 @@ En el dashboard web:
 Para depurar por consola el sistema de observacion:
 
 - activa `logObservationEventsToConsole` en `ObservationTracker` (por defecto viene en `false`)
+ - `ObservationTracker` asigna automáticamente la cámara de observación a `Main Camera` si no se ha proporcionado.
 
 ## 8) Endpoints HTTP
 
