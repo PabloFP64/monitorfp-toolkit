@@ -348,6 +348,11 @@ public class ObservationTracker : MonoBehaviour
             snapshotBuffer.Clear();
             float elapsed = trackingStartMs > 0 ? Mathf.Max(0f, (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - trackingStartMs) / 1000f) : 0f;
 
+            if (logObservationEventsToConsole)
+            {
+                Debug.Log($"[MONITOR][OBS] RebuildSnapshot called. Tracked count={tracked.Count}");
+            }
+
             foreach (KeyValuePair<InterestingGameObject, ObservationState> kv in tracked)
             {
                 InterestingGameObject marker = kv.Key;
@@ -355,6 +360,11 @@ public class ObservationTracker : MonoBehaviour
                 if (marker == null || state == null)
                 {
                     continue;
+                }
+
+                if (logObservationEventsToConsole)
+                {
+                    Debug.Log($"[MONITOR][OBS] Snapshot include: {marker.DisplayName} firstSeen={state.firstSeenAtSeconds} total={state.totalObservedSeconds}");
                 }
 
                 float[] segments = BuildSegments(state, elapsed);
