@@ -3,10 +3,10 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-public static class MonitorFPTopDownCameraTools
+public static class MonitorFPEditorTools
 {
-    private const string MenuPathTopDown = "MonitorFP/Crear Camara Top Down para Mapa";
-    private const string MenuPathSetup = "MonitorFP/Crear Setup Minimo en Escena";
+    private const string MenuPathSetup = "MonitorFP/1 Crear Setup Minimo en Escena";
+    private const string MenuPathTopDown = "MonitorFP/2 Crear Camara Top Down para Mapa";
     private const float DefaultHeight = 8f;
     private const float DefaultOrthoSize = 6f;
 
@@ -82,7 +82,7 @@ public static class MonitorFPTopDownCameraTools
         EnsureRuntimeComponentOnNamedObject("SessionRecorder", "SessionRecorder");
         EnsureRuntimeComponentOnNamedObject("UserTracker", "UserTracker");
         EnsureRuntimeComponentOnNamedObject("InteractionTracker", "ARInteractionEventTracker");
-        EnsureRuntimeComponentOnNamedObject("ObservationTracking", "ObservationTrackingSettings");
+        Component obsSettings = EnsureRuntimeComponentOnNamedObject("ObservationTracking", "ObservationTrackingSettings");
         EnsureRuntimeComponentOnNamedObject("ObservationTracking", "ObservationTracker");
 
         GameObject sessionRecorderGO = GameObject.Find("SessionRecorder");
@@ -111,6 +111,20 @@ public static class MonitorFPTopDownCameraTools
                     sourceCameraProp.objectReferenceValue = source;
                     so.ApplyModifiedProperties();
                     EditorUtility.SetDirty(server);
+                }
+
+                // Also assign ObservationTrackingSettings.observationCamera if present
+                if (obsSettings != null)
+                {
+                    Undo.RecordObject(obsSettings, "Assign observation camera");
+                    SerializedObject soObs = new SerializedObject(obsSettings);
+                    SerializedProperty obsCameraProp = soObs.FindProperty("observationCamera");
+                    if (obsCameraProp != null)
+                    {
+                        obsCameraProp.objectReferenceValue = source;
+                        soObs.ApplyModifiedProperties();
+                        EditorUtility.SetDirty(obsSettings);
+                    }
                 }
             }
             else
