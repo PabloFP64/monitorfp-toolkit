@@ -21,7 +21,7 @@ Notas:
 - El paquete detecta automaticamente si `com.unity.xr.interaction.toolkit` esta disponible y habilita los eventos XR.
 - Sin XR, sigue funcionando como telemetria, streaming, eventos de movimiento y observacion basicos.
 
-## 2) Instalacion (elige una opcion)
+## 2) Instalacion
 
 Instalacion desde Git en Package Manager:
 
