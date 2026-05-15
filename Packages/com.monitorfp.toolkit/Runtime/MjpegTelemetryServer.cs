@@ -802,6 +802,16 @@ public class MjpegTelemetryServer : MonoBehaviour
             font-size: 12px;
             font-weight: 600;
             cursor: pointer;
+            transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+        }
+        .obs-button:hover {
+            filter: brightness(0.98);
+        }
+        .obs-button:active,
+        .obs-button.pressed {
+            transform: translateY(1px) scale(0.97);
+            box-shadow: 0 0 0 rgba(0, 0, 0, 0);
         }
         .obs-button.start {
             background: #d4edda;
@@ -815,6 +825,45 @@ public class MjpegTelemetryServer : MonoBehaviour
             font-size: 12px;
             color: #666;
             font-family: monospace;
+        }
+        .toast-region {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 9999;
+            pointer-events: none;
+        }
+        .toast {
+            min-width: 220px;
+            max-width: 320px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+            opacity: 0;
+            transform: translateY(10px);
+            animation: toastInOut 2.3s ease forwards;
+        }
+        .toast.info {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+        .toast.success {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+        }
+        .toast.error {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+        }
+        @keyframes toastInOut {
+            0% { opacity: 0; transform: translateY(10px) scale(0.98); }
+            10% { opacity: 1; transform: translateY(0) scale(1); }
+            84% { opacity: 1; transform: translateY(0) scale(1); }
+            100% { opacity: 0; transform: translateY(6px) scale(0.98); }
         }
         .interesting-table {
             width: 100%;
@@ -849,6 +898,16 @@ public class MjpegTelemetryServer : MonoBehaviour
             font-weight: bold;
         }
         .event-type {
+        }
+        .toast-region {
+            position: fixed;
+            right: 16px;
+            bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 9999;
+            pointer-events: none;
             color: #666;
             margin: 0 4px;
         }
@@ -946,13 +1005,13 @@ public class MjpegTelemetryServer : MonoBehaviour
             <div class=""panel"">
                 <h2>Eventos de sesión</h2>
                 <div class=""observation-controls"">
-                    <button class=""obs-button start"" onclick=""startObservationTracking()"">Iniciar seguimiento observación</button>
-                    <button class=""obs-button stop"" onclick=""stopObservationTracking()"">Parar seguimiento observación</button>
+                    <button class=""obs-button start"" onclick=""startObservationTracking(this)"">Iniciar seguimiento observación</button>
+                    <button class=""obs-button stop"" onclick=""stopObservationTracking(this)"">Parar seguimiento observación</button>
                     <span id=""obsStatus"" class=""obs-status"">Tracking: inactivo</span>
                 </div>
                 <div class=""observation-controls"" style=""margin-top:8px;"">
-                    <button class=""obs-button start"" onclick=""startRecording()"">Iniciar grabación</button>
-                    <button class=""obs-button stop"" onclick=""stopRecording()"">Parar grabación</button>
+                    <button class=""obs-button start"" onclick=""startRecording(this)"">Iniciar grabación</button>
+                    <button class=""obs-button stop"" onclick=""stopRecording(this)"">Parar grabación</button>
                     <label style=""font-size:12px; margin-left:8px;""><input id=""browserRecordToggle"" type=""checkbox"" checked> Grabar en navegador (.webm)</label>
                     <label style=""font-size:12px; margin-left:8px;""><input id=""nativeRecordToggle"" type=""checkbox""> Intentar grabación nativa Android</label>
                 </div>
@@ -1005,6 +1064,8 @@ public class MjpegTelemetryServer : MonoBehaviour
             </div>
         </div>
     </div>
+
+    <div id=""toastRegion"" class=""toast-region"" aria-live=""polite"" aria-atomic=""true""></div>
 
     <script>
         const baseUrl = window.location.origin;
@@ -1369,7 +1430,8 @@ public class MjpegTelemetryServer : MonoBehaviour
             }
         }
 
-        async function startObservationTracking() {
+        async function startObservationTracking(button) {
+            flashButton(button);
             try {
                 await fetch(baseUrl + '/observation/start?t=' + Date.now());
             } catch (e) {
@@ -1377,7 +1439,8 @@ public class MjpegTelemetryServer : MonoBehaviour
             }
         }
 
-        async function stopObservationTracking() {
+        async function stopObservationTracking(button) {
+            flashButton(button);
             try {
                 await fetch(baseUrl + '/observation/stop?t=' + Date.now());
             } catch (e) {
@@ -1393,27 +1456,64 @@ public class MjpegTelemetryServer : MonoBehaviour
         let manualDownloads = new Map();
         let eventsRetryTimer = null;
         let eventsRetryAttempts = 0;
+        let toastTimer = null;
         const captureCanvasEl = document.getElementById('captureCanvas');
         const captureCtx = captureCanvasEl ? captureCanvasEl.getContext('2d') : null;
 
-        async function startRecording() {
+        function flashButton(button) {
+            if (!button) return;
+            button.classList.remove('pressed');
+            void button.offsetWidth;
+            button.classList.add('pressed');
+            setTimeout(() => button.classList.remove('pressed'), 160);
+        }
+
+        function showToast(message, kind) {
+            const region = document.getElementById('toastRegion');
+            if (!region) return;
+
+            if (toastTimer) {
+                clearTimeout(toastTimer);
+                toastTimer = null;
+            }
+
+            region.innerHTML = '';
+
+            const toast = document.createElement('div');
+            toast.className = 'toast ' + (kind || 'info');
+            toast.textContent = message;
+            region.appendChild(toast);
+
+            toastTimer = setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 2300);
+        }
+
+        async function startRecording(button) {
+            flashButton(button);
             try {
-                await fetch(baseUrl + '/record/start?t=' + Date.now());
+                const resp = await fetch(baseUrl + '/record/start?t=' + Date.now());
+                showToast(resp.ok ? 'Grabación iniciada' : 'No se pudo iniciar la grabación', resp.ok ? 'success' : 'error');
             } catch (e) {
                 console.warn('No se pudo iniciar grabación (server)', e);
+                showToast('No se pudo iniciar la grabación', 'error');
             }
 
             if (document.getElementById('browserRecordToggle') && document.getElementById('browserRecordToggle').checked) {
-                startBrowserRecording();
+                if (startBrowserRecording()) {
+                    showToast('Captura local .webm activada', 'info');
+                }
             }
         }
 
         function startBrowserRecording() {
-            if (browserRecording) return;
+            if (browserRecording) return true;
             const img = document.getElementById('videoFrame');
             if (!captureCanvasEl || !captureCtx || !img) {
                 console.warn('No canvas/img available for browser recording');
-                return;
+                return false;
             }
 
             browserRecording = true;
@@ -1440,9 +1540,11 @@ public class MjpegTelemetryServer : MonoBehaviour
                 requestAnimationFrame(drawFn);
             };
             drawFn();
+            return true;
         }
 
-        async function stopRecording() {
+        async function stopRecording(button) {
+            flashButton(button);
             if (browserRecording) await stopBrowserRecording();
 
             try {
@@ -1473,8 +1575,12 @@ public class MjpegTelemetryServer : MonoBehaviour
             });
         }
 
-        function onEventButtonClick(label) {
-            try { fetch(baseUrl + '/record/marker?label=' + encodeURIComponent(label)); } catch (e) { }
+        async function onEventButtonClick(label, button) {
+            flashButton(button);
+            try {
+                await fetch(baseUrl + '/record/marker?label=' + encodeURIComponent(label));
+                showToast('Marcador añadido: ' + label, 'info');
+            } catch (e) { }
             if (browserRecording) {
                 browserMarkers.push({ ms: Date.now() - browserRecordStart, label: label });
             }
@@ -1506,7 +1612,7 @@ public class MjpegTelemetryServer : MonoBehaviour
                     button.className = 'obs-button';
                     button.style.fontSize = '12px';
                     button.textContent = label;
-                    button.addEventListener('click', () => onEventButtonClick(label));
+                    button.addEventListener('click', () => onEventButtonClick(label, button));
                     container.appendChild(button);
                 });
             }).catch(() => {
